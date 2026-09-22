@@ -125,6 +125,11 @@ nav button{font-size:.72rem}
 .filt{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}
 .filt .chip{flex-shrink:0}
 .note{font-size:.8rem;color:var(--muted)}
+#v-dash{zoom:var(--dz,1)}
+.help h2{margin-top:18px}
+.help p,.help li{font-size:.92rem}
+.help ul{margin:6px 0;padding-left:20px}
+.linkbtn{background:none;border:0;padding:0;font:inherit;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -172,10 +177,22 @@ nav button{font-size:.72rem}
     <div class="card">
       <span class="f" id="lbl-techniek">Techniek</span>
       <div class="chips" id="techniek" role="group" aria-labelledby="lbl-techniek"></div>
-      <label class="f" for="aas">Kunstaas</label>
-      <div class="withmic">
-        <input type="text" id="aas" maxlength="80" placeholder="bijv. shad 12 cm, plug, twister" list="aaslist"><datalist id="aaslist"></datalist>
-        <button type="button" class="mic" data-for="aas" aria-label="Spreek kunstaas in"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <span class="f" id="lbl-aastype">Kunstaas</span>
+      <div class="chips" id="aastype" role="group" aria-labelledby="lbl-aastype"></div>
+      <div id="aasbox" hidden>
+        <label class="f" for="aas">Kunstaas (zelf invullen)</label>
+        <div class="withmic">
+          <input type="text" id="aas" maxlength="80" placeholder="bijv. twister, spinner, jerkbait" list="aaslist"><datalist id="aaslist"></datalist>
+          <button type="button" class="mic" data-for="aas" aria-label="Spreek kunstaas in"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+        </div>
+      </div>
+      <div id="merkbox" hidden>
+        <span class="f" id="lbl-merk">Merk</span>
+        <div class="chips" id="merk" role="group" aria-labelledby="lbl-merk"></div>
+        <div id="merkeigenbox" hidden>
+          <label class="f" for="merkeigen">Merk (zelf invullen)</label>
+          <input type="text" id="merkeigen" maxlength="60" placeholder="bijv. Fox Rage, Keitech" list="merklist"><datalist id="merklist"></datalist>
+        </div>
       </div>
       <span class="f" id="lbl-kleur">Kleur</span>
       <div class="chips" id="kleur" role="group" aria-labelledby="lbl-kleur"></div>
@@ -304,6 +321,9 @@ nav button{font-size:.72rem}
     <div class="chips" id="mode" role="group" aria-label="Weergave"></div>
     <h2>Kleur</h2>
     <div class="swatches" id="palettes" role="group" aria-label="Accentkleur"></div>
+    <h2>Grootte dashboard</h2>
+    <div class="chips" id="dashsize" role="group" aria-label="Grootte dashboard"></div>
+    <p class="note">Handig op een computer: kleinere grafieken, meer in beeld.</p>
     <h2>Automatisch</h2>
     <div class="card">
       <label class="toggle"><span>Locatie en weer ophalen bij openen</span><input type="checkbox" id="autofetch"></label>
@@ -313,7 +333,37 @@ nav button{font-size:.72rem}
     <h2>Over deze app</h2>
     <div class="card">
       <div class="toggle"><span>Versie</span><b id="versie"></b></div>
+      <div class="toggle"><span>Handleiding</span><button type="button" class="linkbtn" id="openhelp">Handleiding openen</button></div>
     </div>
+  </div>
+</div>
+<!-- ============ HANDLEIDING ============ -->
+<div class="modal" id="helpmodal">
+  <div class="sheet help" role="dialog" aria-label="Handleiding">
+    <div class="head"><h1>Handleiding</h1><button class="close" id="helpclose">Sluiten</button></div>
+    <h2>1. Inloggen</h2>
+    <p>Kies bij het openen je naam of maak een nieuwe visser aan, eventueel met een pincode van 4–6 cijfers. Vangsten, logboek en dashboard zijn per visser. Wisselen doe je via Instellingen › Account.</p>
+    <h2>2. Visdag starten</h2>
+    <p>Elke vangst hoort bij een visdag. Tik op <b>Visdag starten</b>. Begintijd, hoofdlocatie en weer (temperatuur, wind, regen, luchtdruk en trend) worden automatisch opgehaald via gps en Open-Meteo. Je kunt alles aanpassen of met <b>Locatie en weer opnieuw ophalen</b> verversen.</p>
+    <h2>3. Vangst vastleggen</h2>
+    <ul>
+      <li>Kies vissoort, tijdstip en lengte in cm.</li>
+      <li>Kies techniek en kunstaas (Shad, Plug of Overig). Bij Shad of Plug kies je daarna het merk (bij Overig vul je het merk zelf in); bij Overig vul je het kunstaas zelf in. Kies daarna de kleur en voeg eventueel een notitie toe.</li>
+      <li>Stek alleen invullen als je bent verplaatst; leeg = hoofdlocatie van de visdag.</li>
+      <li>Tik op <b>Vangst opslaan</b>.</li>
+    </ul>
+    <h2>4. Inspreken</h2>
+    <p>Tik op <b>Spreek de vangst in</b> en zeg bijvoorbeeld: "snoek 78 centimeter, jiggen, chartreuse shad". Losse velden kun je inspreken met het microfoontje in het veld.</p>
+    <h2>5. Visdag afsluiten</h2>
+    <p>Tik op <b>Visdag afsluiten</b>; de eindtijd wordt dan ingevuld. Een visdag zonder vangst telt mee als nulsessie en helpt het dashboard ongunstige omstandigheden te herkennen.</p>
+    <h2>6. Visdagen en logboek</h2>
+    <p>Onder <b>Visdagen</b> zie en wijzig je je sessies. Het <b>Logboek</b> toont alle vangsten; hier kun je vangsten wijzigen of verwijderen.</p>
+    <h2>7. Dashboard</h2>
+    <p>Het dashboard toont verbanden tussen weer, seizoen, techniek en vangst. Filter bovenaan op vissoort. De grootte stel je in via Instellingen › Grootte dashboard.</p>
+    <h2>8. Back-up</h2>
+    <p>Gegevens staan alleen op dit apparaat, in deze browser. Maak regelmatig een back-up via <b>Exporteer als CSV</b> in het logboek. Met <b>Importeer CSV</b> zet je een back-up terug; dubbele regels worden overgeslagen.</p>
+    <h2>9. Instellingen</h2>
+    <p>Weergave (licht, donker, automatisch), accentkleur, grootte dashboard en het automatisch ophalen van locatie en weer.</p>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -322,7 +372,7 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.11'; // ophogen bij elke wijziging
+const VERSIE='1.14'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
@@ -330,6 +380,8 @@ const WINDORDER=['N','NO','O','ZO','Z','ZW','W','NW'];
 const REGEN=['Droog','Motregen','Regen','Buien'];
 const TREND=['Dalend','Stabiel','Stijgend'];
 const TECHNIEK=['Dropshot','Jiggen','Verticalen','Anders'];
+const AASTYPES=['Shad','Plug','Overig'];
+const MERKEN={Shad:['Zeck','Nays','Bass Assassin','Crazy Fish','Overig'],Plug:['Rapala','Westin','Spro','Savage Gear','Overig']};
 const KLEUREN=['Naturel','Wit','Chartreuse','Firetiger','Motoroil','Roze','Zwart','Anders'];
 const MAANDEN=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
 
@@ -367,6 +419,27 @@ chips('regen',REGEN,'Droog');
 chips('trend',TREND,'Stabiel');
 chips('techniek',TECHNIEK,'Jiggen');
 chips('kleur',KLEUREN,'Naturel');
+chips('aastype',AASTYPES,'');
+function renderMerkEigen(){ $('#merkeigenbox').hidden=sel('merk')!=='Overig'; }
+function renderAas(merk){
+  const t=sel('aastype');
+  $('#aasbox').hidden=t!=='Overig';
+  const lijst=MERKEN[t];
+  $('#merkbox').hidden=!lijst;
+  let kies=merk||'';
+  if(lijst&&kies&&!lijst.includes(kies)){ $('#merkeigen').value=kies; kies='Overig'; }
+  else if(merk!==undefined) $('#merkeigen').value='';
+  chips('merk',lijst||[],kies);
+  renderMerkEigen();
+}
+$('#aastype').addEventListener('click',e=>{if(e.target.closest('.chip'))renderAas('');});
+$('#merk').addEventListener('click',e=>{if(e.target.closest('.chip'))renderMerkEigen();});
+function readMerk(){
+  if(!MERKEN[sel('aastype')])return '';
+  const m=sel('merk');
+  return m==='Overig'?($('#merkeigen').value.trim()||'Overig'):m;
+}
+renderAas();
 $('#datum').value=nowLocal();
 [['temp','tempv',' °C'],['bft','bftv',' Bft'],['druk','drukv',' hPa']].forEach(([i,o,u])=>{
   const inp=document.getElementById(i),out=document.getElementById(o);
@@ -393,14 +466,16 @@ const PALETTES={
   grafiet:{naam:'Grafiet',light:{accent:'#3A3F44',ink:'#FFFFFF',bar:'#6D7A85'},dark:{accent:'#C9CFD4',ink:'#0F1F1D',bar:'#9AA6B0'}}
 };
 const MODES=[['auto','Automatisch'],['light','Licht'],['dark','Donker']];
-let settings=Object.assign({mode:'auto',palette:'amber',autofetch:true,autoloc:true},(()=>{try{return JSON.parse(localStorage.getItem(SETK))||{};}catch(e){return {};}})());
+let settings=Object.assign({mode:'auto',palette:'amber',autofetch:true,autoloc:true,dashsize:'normaal'},(()=>{try{return JSON.parse(localStorage.getItem(SETK))||{};}catch(e){return {};}})());
 function saveSettings(){try{localStorage.setItem(SETK,JSON.stringify(settings));}catch(e){}}
 const mq=window.matchMedia('(prefers-color-scheme: dark)');
+const DASHSIZES=[['normaal','Normaal',1],['compact','Compact',.85],['klein','Klein',.7]];
 function applyTheme(){
   const dark=settings.mode==='dark'||(settings.mode==='auto'&&mq.matches);
   document.documentElement.dataset.mode=dark?'dark':'light';
   const p=(PALETTES[settings.palette]||PALETTES.amber)[dark?'dark':'light'];
   const r=document.documentElement.style;
+  r.setProperty('--dz',(DASHSIZES.find(d=>d[0]===settings.dashsize)||DASHSIZES[0])[2]);
   r.setProperty('--accent',p.accent); r.setProperty('--accent-ink',p.ink); r.setProperty('--bar',p.bar);
   const meta=document.querySelector('meta[name="theme-color"]')||document.head.appendChild(Object.assign(document.createElement('meta'),{name:'theme-color'}));
   meta.content=dark?'#0F1F1D':'#EEF1EA';
@@ -419,6 +494,9 @@ function renderSettings(){
     b.addEventListener('click',()=>{settings.palette=k;saveSettings();applyTheme();renderSettings();});s.appendChild(b);
   });
   $('#versie').textContent=VERSIE;
+  const ds=$('#dashsize'); ds.innerHTML='';
+  DASHSIZES.forEach(([k,n])=>{const b=document.createElement('button');b.type='button';b.className='chip'+(settings.dashsize===k?' on':'');b.textContent=n;b.setAttribute('aria-pressed',settings.dashsize===k);
+    b.addEventListener('click',()=>{settings.dashsize=k;saveSettings();applyTheme();renderSettings();});ds.appendChild(b);});
   $('#autofetch').checked=!!settings.autofetch;
   $('#autoloc').checked=!!settings.autoloc;
 }
@@ -426,6 +504,9 @@ $('#autofetch').addEventListener('change',e=>{settings.autofetch=e.target.checke
 $('#autoloc').addEventListener('change',e=>{settings.autoloc=e.target.checked;saveSettings();});
 $('#gear').addEventListener('click',()=>{renderSettings();$('#modal').classList.add('on');});
 $('#close').addEventListener('click',()=>$('#modal').classList.remove('on'));
+$('#openhelp').addEventListener('click',()=>{$('#modal').classList.remove('on');$('#helpmodal').classList.add('on');});
+$('#helpclose').addEventListener('click',()=>$('#helpmodal').classList.remove('on'));
+$('#helpmodal').addEventListener('click',e=>{if(e.target.id==='helpmodal')$('#helpmodal').classList.remove('on');});
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')$('#modal').classList.remove('on');});
 
 // ---------- storage ----------
@@ -629,7 +710,13 @@ function parseCatch(raw){
   else if(/\bbaars/.test(t)){setChip('soort','Baars');got.push('baars');eat(/\bbaars(je|en)?\b/g);}
   // aas: aaswoord met optionele maat (bv. "shad 12 cm")
   m=t.match(new RegExp('((?:\\d{1,2}\\s*(?:cm|centimeter)\\s+)?'+AAS_WOORDEN.source.slice(2,-2)+'(?:\\s+(?:van\\s+)?\\d{1,2}\\s*(?:cm|centimeter))?)'));
-  if(m){ let a=m[1].replace(/centimeter/,'cm').replace(/\s+/g,' ').trim(); a=a.charAt(0).toUpperCase()+a.slice(1); $('#aas').value=a; got.push(a.toLowerCase()); eat(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g')); }
+  if(m){ let a=m[1].replace(/centimeter/,'cm').replace(/\s+/g,' ').trim(); a=a.charAt(0).toUpperCase()+a.slice(1);
+    const soortAas=/^(shad|plug)$/i.test(a)?a.charAt(0).toUpperCase()+a.slice(1).toLowerCase():'Overig';
+    setChip('aastype',soortAas); $('#aas').value=soortAas==='Overig'?a:''; renderAas(); got.push(a.toLowerCase()); eat(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g')); }
+  // merk
+  const lijst=MERKEN[sel('aastype')]||[];
+  const mk=lijst.find(x=>x!=='Overig'&&new RegExp('\b'+x.toLowerCase().replace(' ','\s*')+'\b').test(t));
+  if(mk){ setChip('merk',mk); renderMerkEigen(); got.push(mk.toLowerCase()); eat(new RegExp('\b'+mk.toLowerCase().replace(' ','\s*')+'\b','g')); }
   // lengte
   let m=t.match(/(\d{1,3}(?:[.,]\d)?)\s*(cm|centimeter)/)||t.match(/(\d{2,3})\b(?!\s*(?:hpa|graden|bft|beaufort))/);
   if(m){ const v=parseFloat(m[1].replace(',','.')); if(v>=5&&v<=150){ $('#lengte').value=v; got.push(v+' cm'); eat(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g')); } }
@@ -837,7 +924,7 @@ function readForm(){
   return {soort:sel('soort'), datum,
     lengte:$('#lengte').value?Number($('#lengte').value):null,
     stek:$('#stek').value.trim(),
-    techniek:sel('techniek'), aas:$('#aas').value.trim(), kleur:sel('kleur'),
+    techniek:sel('techniek'), aastype:sel('aastype'), aas:sel('aastype')==='Overig'?$('#aas').value.trim():sel('aastype'), merk:readMerk(), kleur:sel('kleur'),
     notitie:$('#notitie').value.trim(), maand:new Date(datum).getMonth()+1};
 }
 function resetForm(){
@@ -885,7 +972,9 @@ function edit(id){
   const ses=sesById(c.sessieId);
   $('#stek').value=(ses&&c.locatie===ses.locatie)?'':(c.locatie||'');
   setChip('techniek',c.techniek||''); setChip('kleur',c.kleur||'');
-  $('#aas').value=c.aas||''; $('#notitie').value=c.notitie||''; $('#heard').textContent='';
+  let at=c.aastype||''; if(!at&&c.aas) at=AASTYPES.includes(c.aas)?c.aas:'Overig';
+  setChip('aastype',at); $('#aas').value=at==='Overig'?(c.aas||''):''; renderAas(c.merk||'');
+  $('#notitie').value=c.notitie||''; $('#heard').textContent='';
   $('#editbar').hidden=false; $('#save').textContent='Wijziging opslaan';
   renderAdd(); showView('v-add');
 }
@@ -901,6 +990,7 @@ function renderLog(){
   const el=$('#loglist');
   const uniq=k=>[...new Set(catches.map(c=>c[k]).filter(Boolean))].slice(0,20);
   $('#loclist').innerHTML=uniq('locatie').map(v=>'<option value="'+esc(v)+'">').join('');
+  $('#merklist').innerHTML=uniq('merk').filter(v=>!Object.values(MERKEN).flat().includes(v)).map(v=>'<option value="'+esc(v)+'">').join('');
   $('#aaslist').innerHTML=uniq('aas').map(v=>'<option value="'+esc(v)+'">').join('');
   if(!catches.length){el.innerHTML='<div class="empty">Nog geen vangsten. Start een visdag en registreer je eerste vis.</div>';return;}
   el.innerHTML=catches.map(c=>`
@@ -909,7 +999,7 @@ function renderLog(){
         <div class="t">${esc(c.soort)}${c.lengte?' · '+esc(c.lengte)+' cm':''}${c.uren?' · '+esc(c.uren)+' uur gevist':''}</div>
         <div class="m">${esc(fmtDate(c.datum))}${c.locatie?' · '+esc(c.locatie):(c.plaats?' · '+esc(c.plaats):'')}</div>
         <div class="m">${esc(c.temp)} °C · ${esc(c.wind)} ${esc(c.bft)} Bft · ${esc(c.regen)} · ${esc(c.druk)} hPa ${esc((c.trend||'').toLowerCase())}</div>
-        <div class="m">${esc(c.techniek)}${c.aas?' · '+esc(c.aas):''} · ${esc(c.kleur)}</div>
+        <div class="m">${esc(c.techniek)}${c.aas?' · '+esc(c.aas):''}${c.merk?' ('+esc(c.merk)+')':''} · ${esc(c.kleur)}</div>
         ${c.notitie?'<div class="m">'+esc(c.notitie)+'</div>':''}
       </div>
       <div class="r">${c.lat?'<a class="m" href="https://maps.apple.com/?ll='+c.lat+','+c.lon+'&q=Vangst" target="_blank" rel="noopener">kaart</a><br>':''}<button class="e" data-id="${esc(c.id)}">wijzig</button><button class="x" data-id="${esc(c.id)}">verwijder</button></div>
@@ -919,7 +1009,7 @@ function renderLog(){
 }
 
 $('#export').addEventListener('click',()=>{
-  const cols=['visser','datum','soort','lengte','locatie','plaats','lat','lon','temp','wind','bft','regen','druk','trend','techniek','aas','kleur','notitie','visdag_begin','visdag_eind','visdag_locatie','visdag_notitie'];
+  const cols=['visser','datum','soort','lengte','locatie','plaats','lat','lon','temp','wind','bft','regen','druk','trend','techniek','aastype','aas','merk','kleur','notitie','visdag_begin','visdag_eind','visdag_locatie','visdag_notitie'];
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const rij=(c,s)=>cols.map(k=>{
     if(k==='visser')return q(user.naam);
@@ -933,7 +1023,7 @@ $('#export').addEventListener('click',()=>{
   // visdagen zonder vangst krijgen één regel, zodat ze bewaard blijven
   sessions.filter(s=>!sesCatches(s.id).length).forEach(s=>{
     const leeg={datum:s.datum,soort:GEEN,lengte:null,locatie:s.locatie,plaats:s.plaats,lat:s.lat,lon:s.lon,
-      temp:s.temp,wind:s.wind,bft:s.bft,regen:s.regen,druk:s.druk,trend:s.trend,techniek:'',aas:'',kleur:'',notitie:''};
+      temp:s.temp,wind:s.wind,bft:s.bft,regen:s.regen,druk:s.druk,trend:s.trend,techniek:'',aastype:'',aas:'',merk:'',kleur:'',notitie:''};
     lijnen.push(rij(leeg,s));
   });
   const csv=[cols.join(';')].concat(lijnen).join('\n');
@@ -1104,6 +1194,7 @@ function renderDash(){
     ${bars('Techniek',byTe)}
     ${bars('Kleur kunstaas',byK)}
     ${bars('Kunstaas',byA)}
+    ${bars('Merk kunstaas',count(list,c=>c.merk).slice(0,8))}
     ${bars('Stek',byL)}
     ${dashFilter==='Alle'?nulHtml:''}
     <p class="note">Hoe meer visdagen je vastlegt — mét én zonder vangst — hoe betrouwbaarder het verband tussen weer, seizoen en vangst wordt.</p>`;
