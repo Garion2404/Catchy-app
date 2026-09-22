@@ -177,6 +177,10 @@ nav button{font-size:.72rem}
     <div class="card">
       <span class="f" id="lbl-techniek">Techniek</span>
       <div class="chips" id="techniek" role="group" aria-labelledby="lbl-techniek"></div>
+      <div id="techeigenbox" hidden>
+        <label class="f" for="techeigen">Techniek (zelf invullen)</label>
+        <input type="text" id="techeigen" maxlength="60" placeholder="bijv. spinnen, slepen, twitchen" list="techlist"><datalist id="techlist"></datalist>
+      </div>
       <span class="f" id="lbl-aastype">Kunstaas</span>
       <div class="chips" id="aastype" role="group" aria-labelledby="lbl-aastype"></div>
       <div id="aasbox" hidden>
@@ -196,6 +200,10 @@ nav button{font-size:.72rem}
       </div>
       <span class="f" id="lbl-kleur">Kleur</span>
       <div class="chips" id="kleur" role="group" aria-labelledby="lbl-kleur"></div>
+      <div id="kleureigenbox" hidden>
+        <label class="f" for="kleureigen">Kleur (zelf invullen)</label>
+        <input type="text" id="kleureigen" maxlength="60" placeholder="bijv. perch, oranje-goud" list="kleurlist"><datalist id="kleurlist"></datalist>
+      </div>
       <label class="f" for="notitie">Notitie</label>
       <div class="withmic">
         <textarea id="notitie" maxlength="500" placeholder="Diepte, bodem, hoe de aanbeet was&hellip;"></textarea>
@@ -348,7 +356,7 @@ nav button{font-size:.72rem}
     <h2>3. Vangst vastleggen</h2>
     <ul>
       <li>Kies vissoort, tijdstip en lengte in cm.</li>
-      <li>Kies techniek en kunstaas (Shad, Plug of Overig). Bij Shad of Plug kies je daarna het merk (bij Overig vul je het merk zelf in); bij Overig vul je het kunstaas zelf in. Kies daarna de kleur en voeg eventueel een notitie toe.</li>
+      <li>Kies techniek (bij Overig vul je de techniek zelf in) en kunstaas (Shad, Plug of Overig). Bij Shad of Plug kies je daarna het merk (bij Overig vul je het merk zelf in); bij Overig vul je het kunstaas zelf in. Kies daarna de kleur (bij Overig vul je de kleur zelf in) en voeg eventueel een notitie toe.</li>
       <li>Stek alleen invullen als je bent verplaatst; leeg = hoofdlocatie van de visdag.</li>
       <li>Tik op <b>Vangst opslaan</b>.</li>
     </ul>
@@ -372,17 +380,17 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.14'; // ophogen bij elke wijziging
+const VERSIE='1.16'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
 const WINDORDER=['N','NO','O','ZO','Z','ZW','W','NW'];
 const REGEN=['Droog','Motregen','Regen','Buien'];
 const TREND=['Dalend','Stabiel','Stijgend'];
-const TECHNIEK=['Dropshot','Jiggen','Verticalen','Anders'];
+const TECHNIEK=['Dropshot','Jiggen','Verticalen','Overig'];
 const AASTYPES=['Shad','Plug','Overig'];
 const MERKEN={Shad:['Zeck','Nays','Bass Assassin','Crazy Fish','Overig'],Plug:['Rapala','Westin','Spro','Savage Gear','Overig']};
-const KLEUREN=['Naturel','Wit','Chartreuse','Firetiger','Motoroil','Roze','Zwart','Anders'];
+const KLEUREN=['Naturel','Wit','Chartreuse','Firetiger','Motoroil','Roze','Zwart','Overig'];
 const MAANDEN=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
 
 let catches=[];
@@ -418,7 +426,25 @@ chips('wind',WINDGRID,'ZW');
 chips('regen',REGEN,'Droog');
 chips('trend',TREND,'Stabiel');
 chips('techniek',TECHNIEK,'Jiggen');
+function renderTechEigen(){ $('#techeigenbox').hidden=sel('techniek')!=='Overig'; }
+$('#techniek').addEventListener('click',e=>{if(e.target.closest('.chip'))renderTechEigen();});
+function setTech(k){
+  k=k||''; if(k==='Anders')k='Overig';
+  if(k&&!TECHNIEK.includes(k)){ setChip('techniek','Overig'); $('#techeigen').value=k; }
+  else { setChip('techniek',k); $('#techeigen').value=''; }
+  renderTechEigen();
+}
+function readTech(){ const k=sel('techniek'); return k==='Overig'?($('#techeigen').value.trim()||'Overig'):k; }
 chips('kleur',KLEUREN,'Naturel');
+function renderKleurEigen(){ $('#kleureigenbox').hidden=sel('kleur')!=='Overig'; }
+$('#kleur').addEventListener('click',e=>{if(e.target.closest('.chip'))renderKleurEigen();});
+function setKleur(k){
+  k=k||''; if(k==='Anders')k='Overig';
+  if(k&&!KLEUREN.includes(k)){ setChip('kleur','Overig'); $('#kleureigen').value=k; }
+  else { setChip('kleur',k); $('#kleureigen').value=''; }
+  renderKleurEigen();
+}
+function readKleur(){ const k=sel('kleur'); return k==='Overig'?($('#kleureigen').value.trim()||'Overig'):k; }
 chips('aastype',AASTYPES,'');
 function renderMerkEigen(){ $('#merkeigenbox').hidden=sel('merk')!=='Overig'; }
 function renderAas(merk){
@@ -721,9 +747,9 @@ function parseCatch(raw){
   let m=t.match(/(\d{1,3}(?:[.,]\d)?)\s*(cm|centimeter)/)||t.match(/(\d{2,3})\b(?!\s*(?:hpa|graden|bft|beaufort))/);
   if(m){ const v=parseFloat(m[1].replace(',','.')); if(v>=5&&v<=150){ $('#lengte').value=v; got.push(v+' cm'); eat(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g')); } }
   // techniek
-  for(const [n,re] of TECH_SYN){ if(re.test(t)){setChip('techniek',n);got.push(n.toLowerCase());eat(new RegExp(re.source,'g'));break;} }
+  for(const [n,re] of TECH_SYN){ if(re.test(t)){setTech(n);got.push(n.toLowerCase());eat(new RegExp(re.source,'g'));break;} }
   // kleur
-  for(const [n,re] of KLEUR_SYN){ if(re.test(t)){setChip('kleur',n);got.push(n.toLowerCase());eat(new RegExp(re.source,'g'));break;} }
+  for(const [n,re] of KLEUR_SYN){ if(re.test(t)){setKleur(n);got.push(n.toLowerCase());eat(new RegExp(re.source,'g'));break;} }
   // stek: "op/bij/in de <naam>"
   m=t.match(/\b(?:op|bij|in|aan)\s+(?:de|het|'t)?\s*([a-zà-ü][a-zà-ü\-]+(?:\s+[a-zà-ü][a-zà-ü\-]+){0,2})/);
   if(m&&!$('#stek').value.trim()&&!/\b(diepte|meter|bodem|kant|oever|rand)\b/.test(m[1])){ const s=m[1].trim(); $('#stek').value=s.charAt(0).toUpperCase()+s.slice(1); got.push('stek '+s); eat(new RegExp(m[0].replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g')); }
@@ -924,7 +950,7 @@ function readForm(){
   return {soort:sel('soort'), datum,
     lengte:$('#lengte').value?Number($('#lengte').value):null,
     stek:$('#stek').value.trim(),
-    techniek:sel('techniek'), aastype:sel('aastype'), aas:sel('aastype')==='Overig'?$('#aas').value.trim():sel('aastype'), merk:readMerk(), kleur:sel('kleur'),
+    techniek:readTech(), aastype:sel('aastype'), aas:sel('aastype')==='Overig'?$('#aas').value.trim():sel('aastype'), merk:readMerk(), kleur:readKleur(),
     notitie:$('#notitie').value.trim(), maand:new Date(datum).getMonth()+1};
 }
 function resetForm(){
@@ -971,7 +997,7 @@ function edit(id){
   $('#lengte').value=c.lengte??'';
   const ses=sesById(c.sessieId);
   $('#stek').value=(ses&&c.locatie===ses.locatie)?'':(c.locatie||'');
-  setChip('techniek',c.techniek||''); setChip('kleur',c.kleur||'');
+  setTech(c.techniek); setKleur(c.kleur);
   let at=c.aastype||''; if(!at&&c.aas) at=AASTYPES.includes(c.aas)?c.aas:'Overig';
   setChip('aastype',at); $('#aas').value=at==='Overig'?(c.aas||''):''; renderAas(c.merk||'');
   $('#notitie').value=c.notitie||''; $('#heard').textContent='';
@@ -990,6 +1016,8 @@ function renderLog(){
   const el=$('#loglist');
   const uniq=k=>[...new Set(catches.map(c=>c[k]).filter(Boolean))].slice(0,20);
   $('#loclist').innerHTML=uniq('locatie').map(v=>'<option value="'+esc(v)+'">').join('');
+  $('#techlist').innerHTML=uniq('techniek').filter(v=>!TECHNIEK.includes(v)&&v!=='Anders').map(v=>'<option value="'+esc(v)+'">').join('');
+  $('#kleurlist').innerHTML=uniq('kleur').filter(v=>!KLEUREN.includes(v)&&v!=='Anders').map(v=>'<option value="'+esc(v)+'">').join('');
   $('#merklist').innerHTML=uniq('merk').filter(v=>!Object.values(MERKEN).flat().includes(v)).map(v=>'<option value="'+esc(v)+'">').join('');
   $('#aaslist').innerHTML=uniq('aas').map(v=>'<option value="'+esc(v)+'">').join('');
   if(!catches.length){el.innerHTML='<div class="empty">Nog geen vangsten. Start een visdag en registreer je eerste vis.</div>';return;}
@@ -1162,8 +1190,8 @@ function renderDash(){
   const byD=count(list,drukBin,DRUKL);
   const byTr=count(list,c=>c.trend,TREND);
   const byR=count(list,c=>c.regen,REGEN);
-  const byTe=count(list,c=>c.techniek,TECHNIEK);
-  const byK=count(list,c=>c.kleur);
+  const byTe=count(list,c=>c.techniek==='Anders'?'Overig':c.techniek);
+  const byK=count(list,c=>c.kleur==='Anders'?'Overig':c.kleur);
   const byA=count(list,c=>c.aas).slice(0,8);
   const byS=count(list,c=>c.soort,SOORTEN);
   const byL=count(list,c=>c.locatie||c.plaats).slice(0,8);
