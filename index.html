@@ -36,6 +36,10 @@ input:focus,select:focus,textarea:focus,button:focus-visible{border-color:var(--
 textarea{min-height:64px;resize:vertical}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
+.vs-kop{font-weight:800;font-size:1.1rem;margin:0 0 2px}
+.vs-r{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--line);font-size:.95rem}
+.vs-r span:first-child{color:var(--muted)}
+.vs-r span:last-child{text-align:right;font-weight:600}
 .chip{border:1px solid var(--line);background:var(--chip);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-size:.95rem;font-weight:600;cursor:pointer;min-height:40px}
 .chip.on{background:var(--chip-on);color:var(--chip-on-ink);border-color:var(--chip-on)}
 .chip.sm{padding:6px 10px;font-size:.85rem;min-height:34px}
@@ -306,6 +310,9 @@ nav button{font-size:.72rem}
       <div class="chips" id="trend" role="group" aria-labelledby="lbl-trend"></div>
     </div>
 
+    <h2 id="voorsp-h">Voorspelling</h2>
+    <div class="card" id="voorspelling"></div>
+
     <h2>Aanbeten</h2>
     <div class="card">
       <span class="f" id="lbl-aanbeten">Aantal aanbeten</span>
@@ -360,6 +367,7 @@ nav button{font-size:.72rem}
     <p>Kies bij het openen je naam of maak een nieuwe visser aan, eventueel met een pincode van 4–6 cijfers. Vangsten, logboek en dashboard zijn per visser. Wisselen doe je via Instellingen › Account.</p>
     <h2>2. Visdag starten</h2>
     <p>Elke vangst hoort bij een visdag. Tik op <b>Visdag starten</b>. Begintijd, hoofdlocatie en weer (temperatuur, wind, regen, luchtdruk en trend) worden automatisch opgehaald via gps en Open-Meteo. Je kunt alles aanpassen of met <b>Locatie en weer opnieuw ophalen</b> verversen.</p>
+    <p>Bij het starten van een visdag toont <b>Voorspelling</b> de kans op vangst en advies over soort, techniek, kunstaas, merk, kleur en beste tijd. Dit is gebaseerd op je eigen visdagen bij vergelijkbaar weer (temperatuur, luchtdruk en trend, wind, regen) en seizoen. Pas je het weer aan, dan past de voorspelling mee aan. Heb je bij je visdagen het aantal aanbeten ingevuld, dan toont de voorspelling ook de kans op een aanbeet, het verwachte aantal aanbeten en je omzetting (welk deel van de aanbeten een vangst wordt); dit telt mee in de kans op vangst. Er zijn minimaal 3 afgesloten visdagen nodig.</p>
     <h2>3. Vangst vastleggen</h2>
     <ul>
       <li>Kies vissoort, tijdstip en lengte in cm.</li>
@@ -370,7 +378,7 @@ nav button{font-size:.72rem}
     <h2>4. Inspreken</h2>
     <p>Tik op <b>Spreek de vangst in</b> en zeg bijvoorbeeld: "snoek 78 centimeter, kanticalen, grijs wit shad". Losse velden kun je inspreken met het microfoontje in het veld.</p>
     <h2>5. Visdag afsluiten</h2>
-    <p>Tik op <b>Visdag afsluiten</b>; de eindtijd wordt dan ingevuld. Een visdag zonder vangst telt mee als nulsessie en helpt het dashboard ongunstige omstandigheden te herkennen. Vul via <b>wijzig</b> bij de visdag het aantal aanbeten in (1&ndash;2, 3&ndash;5, 6&ndash;10 of 11 of meer).</p>
+    <p>Tik op <b>Visdag afsluiten</b>; de eindtijd wordt dan ingevuld. Een visdag zonder vangst telt mee als nulsessie en helpt het dashboard ongunstige omstandigheden te herkennen. Vul via <b>wijzig</b> bij de visdag het aantal aanbeten in (0, 1&ndash;2, 3&ndash;5, 6&ndash;10 of 11 of meer).</p>
     <h2>6. Visdagen en logboek</h2>
     <p>Onder <b>Visdagen</b> zie en wijzig je je sessies. Het <b>Logboek</b> toont alle vangsten; hier kun je vangsten wijzigen of verwijderen.</p>
     <h2>7. Dashboard</h2>
@@ -387,13 +395,14 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.20'; // ophogen bij elke wijziging
+const VERSIE='1.22'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
 const WINDORDER=['N','NO','O','ZO','Z','ZW','W','NW'];
 const REGEN=['Droog','Motregen','Regen','Buien'];
-const AANBETEN=['','1–2','3–5','6–10','11 of meer'];
+const AANBETEN=['','0','1–2','3–5','6–10','11 of meer'];
+const AANBEET_N={'0':0,'1–2':1.5,'3–5':4,'6–10':8,'11 of meer':13}; // midden van elke klasse
 const TREND=['Dalend','Stabiel','Stijgend'];
 const TECHNIEK=['Dropshot','Jiggen','Kanticalen','Verticalen','Overig'];
 const AASTYPES=['Shad','Plug','Overig'];
@@ -684,8 +693,86 @@ async function fetchAll(silent){
     if(!silent) toast('Ophalen mislukt');
   }
   btn.disabled=false;
+  renderVoorspelling();
 }
 $('#weer').addEventListener('click',()=>fetchAll(false));
+
+// ---------- voorspelling ----------
+function kring(a,b,n){const d=Math.abs(a-b)%n;return Math.min(d,n-d);}
+function gelijkenis(s,cur){
+  const f=(v,max)=>Math.max(0.15,1-v/max); let w=1;
+  if(s.temp!=null&&s.temp!=='') w*=f(Math.abs(Number(s.temp)-cur.temp),10);
+  if(s.druk!=null&&s.druk!=='') w*=f(Math.abs(Number(s.druk)-cur.druk),15);
+  if(s.bft!=null&&s.bft!=='') w*=f(Math.abs(Number(s.bft)-cur.bft),4);
+  if(s.trend) w*=s.trend===cur.trend?1:0.6;
+  if(s.regen) w*=s.regen===cur.regen?1:((s.regen==='Droog')===(cur.regen==='Droog')?0.8:0.5);
+  const iw=WINDORDER.indexOf(s.wind), ic=WINDORDER.indexOf(cur.wind);
+  if(iw>=0&&ic>=0) w*=[1,0.85,0.65,0.55,0.5][kring(iw,ic,8)];
+  const m=new Date(s.datum).getMonth()+1; if(!isNaN(m)) w*=f(kring(m,cur.maand,12),4);
+  return w;
+}
+function topW(items,n){
+  const m=new Map(); let tot=0;
+  items.forEach(([k,w])=>{ if(k==null||k==='')return; m.set(k,(m.get(k)||0)+w); tot+=w; });
+  return tot?[...m.entries()].sort((a,b)=>b[1]-a[1]).slice(0,n).map(([k,v])=>[k,Math.round(v/tot*100)]):[];
+}
+function renderVoorspelling(){
+  const box=$('#voorspelling'), h=$('#voorsp-h'); if(!box)return;
+  const toon=!sesEdit; box.hidden=!toon; h.hidden=!toon; if(!toon)return;
+  const begin=$('#sesstart').value||nowLocal();
+  const cur={temp:Number($('#temp').value),druk:Number($('#druk').value),bft:Number($('#bft').value),
+    wind:sel('wind'),regen:sel('regen'),trend:sel('trend'),maand:new Date(begin).getMonth()+1};
+  const hist=sessions.filter(x=>x.eind);
+  if(hist.length<3){ box.innerHTML='<p class="note" style="margin:0">Nog te weinig afgesloten visdagen voor een voorspelling (minimaal 3, nu '+hist.length+'). Leg ook dagen zonder vangst vast.</p>'; return; }
+  const rows=hist.map(x=>({s:x,w:gelijkenis(x,cur),list:sesCatches(x.id),u:Math.max(sesUren(x),.25)}));
+  const W=rows.reduce((a,x)=>a+x.w,0);
+  const kansV=rows.reduce((a,x)=>a+x.w*(x.list.length?1:0),0)/W;
+  // aanbeten: alleen visdagen waar het aantal is ingevuld
+  const ab=rows.filter(x=>AANBEET_N[x.s.aanbeten]!=null).map(x=>Object.assign({n:AANBEET_N[x.s.aanbeten]},x));
+  const Wa=ab.reduce((a,x)=>a+x.w,0);
+  let kansA=null, omzet=null, abUur=null;
+  if(Wa>0){
+    kansA=ab.reduce((a,x)=>a+x.w*(x.n>0?1:0),0)/Wa;
+    abUur=ab.reduce((a,x)=>a+x.w*x.n/x.u,0)/Wa;
+    const bites=ab.reduce((a,x)=>a+x.w*x.n,0);
+    if(bites>0) omzet=Math.min(1,ab.reduce((a,x)=>a+x.w*x.list.length,0)/bites);
+  }
+  // kans op vangst: werkelijke vangsten gecombineerd met wat de aanbeten bij je omzetting opleveren
+  let kans=kansV;
+  if(omzet!=null){
+    const viaA=ab.reduce((a,x)=>a+x.w*(1-Math.pow(1-omzet,x.n)),0)/Wa;
+    kans=(kansV*W+viaA*Wa)/(W+Wa);
+  }
+  const perUur=rows.reduce((a,x)=>a+x.w*x.list.length/x.u,0)/W;
+  const items=rows.flatMap(x=>x.list.map(c=>({c,w:x.w})));
+  const fmt=arr=>arr.length?arr.map(([k,p])=>esc(k)+' ('+p+'%)').join(', '):'–';
+  const tijd=topW(items.map(x=>{const d=new Date(x.c.datum);if(isNaN(d))return [null,0];const b=Math.floor(d.getHours()/2)*2;return [pad(b)+'–'+pad(b+2)+' uur',x.w];}),1);
+  const bet=topW(rows.filter(x=>x.s.aanbeten).map(x=>[x.s.aanbeten,x.w]),1);
+  const pct=Math.round(kans*100);
+  const kop=pct>=66?'Goede kans op vangst':pct>=33?'Redelijke kans op vangst':'Kleine kans op vangst';
+  const betr=W<3?'laag':W<8?'redelijk':'goed';
+  const rij=(a,b)=>'<div class="vs-r"><span>'+a+'</span><span>'+b+'</span></div>';
+  let html='<p class="vs-kop">'+kop+' ('+pct+'%)</p><p class="note" style="margin:0 0 8px">Verwachting: ongeveer '+perUur.toFixed(1).replace('.',',')+' vangst per uur.</p>';
+  if(items.length){
+    html+=rij('Soort',fmt(topW(items.map(x=>[x.c.soort,x.w]),2)))
+      +rij('Techniek',fmt(topW(items.map(x=>[x.c.techniek,x.w]),2)))
+      +rij('Kunstaas',fmt(topW(items.map(x=>[x.c.aas||x.c.aastype,x.w]),2)))
+      +rij('Merk',fmt(topW(items.map(x=>[x.c.merk,x.w]),1)))
+      +rij('Kleur',fmt(topW(items.map(x=>[x.c.kleur==='Anders'?'Overig':x.c.kleur,x.w]),2)))
+      +(tijd.length?rij('Beste tijd',esc(tijd[0][0])):'');
+  }else html+='<p class="note" style="margin:0">Nog geen vangsten in je historie om advies over techniek, kunstaas en kleur op te baseren.</p>';
+  if(Wa>0){
+    html+=rij('Kans op aanbeet',Math.round(kansA*100)+'%')
+      +(bet.length?rij('Verwachte aanbeten',esc(bet[0][0])+' (≈ '+abUur.toFixed(1).replace('.',',')+' per uur)'):'')
+      +(omzet!=null?rij('Omzetting',Math.round(omzet*100)+'% van de aanbeten wordt vangst'):'');
+    if(omzet!=null&&omzet<0.25&&kansA>=0.5&&Wa>=2) html+='<p class="note" style="margin:8px 0 0">De vis is bij dit weer vaak actief, maar weinig aanbeten worden een vangst. Probeer bijvoorbeeld kleiner aas, scherpere haken of een rustiger presentatie.</p>';
+  }else html+='<p class="note" style="margin:8px 0 0">Vul bij je visdagen het aantal aanbeten in (ook 0); dan houdt de voorspelling ook rekening met de activiteit van de vis.</p>';
+  html+='<p class="note" style="margin:10px 0 0">Gebaseerd op je eigen visdagen bij vergelijkbaar weer en seizoen (≈ '+Math.max(1,Math.round(W))+' vergelijkbare visdagen, betrouwbaarheid '+betr+(Wa>0?'; aanbeten: '+(Wa<3?'laag':Wa<8?'redelijk':'goed'):'')+'). De kans op vangst combineert je werkelijke vangsten met de aanbeten en je omzetting. Percentages bij soort, techniek, kunstaas en kleur zijn het aandeel in de vangsten onder die omstandigheden. Een indicatie, geen garantie.</p>';
+  box.innerHTML=html;
+}
+['temp','bft','druk'].forEach(id=>$('#'+id).addEventListener('input',renderVoorspelling));
+['wind','regen','trend'].forEach(id=>$('#'+id).addEventListener('click',e=>{if(e.target.closest('.chip'))renderVoorspelling();}));
+$('#sesstart').addEventListener('change',renderVoorspelling);
 $('#loctext').textContent='Locatie nog niet bepaald';
 
 // ---------- spraak ----------
@@ -848,6 +935,7 @@ function openSes(ses){
     $('#weer-note').textContent='Locatie en weer worden opgehaald en gelden voor de hele visdag.';
     if(settings.autofetch) fetchAll(true);
   }
+  renderVoorspelling();
   $('#sesmodal').classList.add('on');
 }
 $('#startses').addEventListener('click',()=>{ if(!user){renderLogin();return;} openSes(null); });
