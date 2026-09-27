@@ -378,7 +378,7 @@ nav button{font-size:.72rem}
     <h2>4. Inspreken</h2>
     <p>Tik op <b>Spreek de vangst in</b> en zeg bijvoorbeeld: "snoek 78 centimeter, kanticalen, grijs wit shad". Losse velden kun je inspreken met het microfoontje in het veld.</p>
     <h2>5. Visdag afsluiten</h2>
-    <p>Tik op <b>Visdag afsluiten</b>; de eindtijd wordt dan ingevuld. Een visdag zonder vangst telt mee als nulsessie en helpt het dashboard ongunstige omstandigheden te herkennen. Vul via <b>wijzig</b> bij de visdag het aantal aanbeten in (0, 1&ndash;2, 3&ndash;5, 6&ndash;10 of 11 of meer).</p>
+    <p>Tik op <b>Visdag afsluiten</b>; de eindtijd wordt dan ingevuld. Een visdag zonder vangst telt mee als nulsessie en helpt het dashboard ongunstige omstandigheden te herkennen. Vul via <b>wijzig</b> bij de visdag het aantal aanbeten in (0, 1&ndash;2, 3&ndash;5, 6&ndash;10, 11&ndash;20 of 21 of meer).</p>
     <h2>6. Visdagen en logboek</h2>
     <p>Onder <b>Visdagen</b> zie en wijzig je je sessies. Het <b>Logboek</b> toont alle vangsten; hier kun je vangsten wijzigen of verwijderen.</p>
     <h2>7. Dashboard</h2>
@@ -395,14 +395,15 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.22'; // ophogen bij elke wijziging
+const VERSIE='1.23'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
 const WINDORDER=['N','NO','O','ZO','Z','ZW','W','NW'];
 const REGEN=['Droog','Motregen','Regen','Buien'];
-const AANBETEN=['','0','1–2','3–5','6–10','11 of meer'];
-const AANBEET_N={'0':0,'1–2':1.5,'3–5':4,'6–10':8,'11 of meer':13}; // midden van elke klasse
+const AANBETEN=['','0','1–2','3–5','6–10','11–20','21 of meer'];
+const AANBEET_N={'0':0,'1–2':1.5,'3–5':4,'6–10':8,'11–20':15,'21 of meer':25};
+const hernoemAanbeet=x=>{ if(x&&x.aanbeten==='11 of meer'){x.aanbeten='11–20';return true;} return false; }; // midden van elke klasse
 const TREND=['Dalend','Stabiel','Stijgend'];
 const TECHNIEK=['Dropshot','Jiggen','Kanticalen','Verticalen','Overig'];
 const AASTYPES=['Shad','Plug','Overig'];
@@ -582,6 +583,7 @@ function startApp(u){
   catches=lsLoad(); sessions=sesLoad();
   let veranderd=migrateSessions();
   catches.forEach(c=>{ if(hernoemKleur(c)) veranderd=true; });
+  sessions.forEach(x=>{ if(hernoemAanbeet(x)) veranderd=true; });
   active=sessions.find(x=>!x.eind)||null;
   if(veranderd){ lsSave(); sesSave(); }
   sortSessions(); setCatches(catches); $('#export').hidden=false;
@@ -1194,7 +1196,7 @@ $('#importfile').addEventListener('change',async e=>{
         if(!ses){
           ses={id:newId('s'),datum:c.visdag_begin,eind:c.visdag_eind||addHours(c.visdag_begin,1),
             locatie:c.visdag_locatie||c.locatie||'',lat:c.lat??null,lon:c.lon??null,plaats:c.plaats||'',
-            notitie:c.visdag_notitie||'',aanbeten:c.visdag_aanbeten||'',maand:new Date(c.visdag_begin).getMonth()+1};
+            notitie:c.visdag_notitie||'',aanbeten:c.visdag_aanbeten==='11 of meer'?'11–20':(c.visdag_aanbeten||''),maand:new Date(c.visdag_begin).getMonth()+1};
           WEERV.forEach(k=>ses[k]=c[k]);
           sessions.push(ses); ns++;
         }
