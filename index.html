@@ -365,7 +365,7 @@ nav button{font-size:.72rem}
       <label class="toggle"><span>Spraakinvoer (microfoon)</span><input type="checkbox" id="spraak"></label>
       <p class="note" id="speech-note" style="margin:4px 0 0"></p>
     </div>
-    <h2>Eigen opties</h2>
+    <h2>Keuzeopties</h2>
     <div class="card">
       <label class="f" for="optdeel" style="margin-top:0">Onderdeel</label>
       <select id="optdeel"></select>
@@ -374,7 +374,7 @@ nav button{font-size:.72rem}
         <button type="button" class="btn" id="optadd">Toevoegen</button>
       </div>
       <div id="optlijst"></div>
-      <p class="note" style="margin:10px 0 0">Tik op een eigen optie om hem te verwijderen. Vangsten die je er al mee hebt vastgelegd blijven ongewijzigd.</p>
+      <p class="note" style="margin:10px 0 0">Kies een onderdeel om de opties te zien. Je kunt zowel standaard- als eigen opties verwijderen; verwijderde standaardopties zet je met één tik terug. Vangsten die je al hebt vastgelegd blijven ongewijzigd.</p>
     </div>
     <p class="note">Alle instellingen worden op dit apparaat onthouden.</p>
     <h2>Over deze app</h2>
@@ -413,7 +413,7 @@ nav button{font-size:.72rem}
     <h2>8. Back-up</h2>
     <p>Gegevens staan alleen op dit apparaat, in deze browser. Maak regelmatig een back-up via <b>Exporteer als CSV</b> in het logboek. Met <b>Importeer CSV</b> zet je een back-up terug; dubbele regels worden overgeslagen.</p>
     <h2>9. Instellingen</h2>
-    <p>Weergave (licht, donker, automatisch), accentkleur, grootte dashboard, het automatisch ophalen van locatie en weer en spraakinvoer aan/uit. Bij <b>Eigen opties</b> voeg je zelf keuzes toe aan vissoort, techniek, kunstaas, merk, kleur en plek. Alle instellingen worden op dit apparaat onthouden.</p>
+    <p>Weergave (licht, donker, automatisch), accentkleur, grootte dashboard, het automatisch ophalen van locatie en weer en spraakinvoer aan/uit. Bij <b>Keuzeopties</b> voeg je zelf keuzes toe aan vissoort, techniek, kunstaas, merk, kleur en plek, of verwijder je opties (ook de standaardopties) die je niet gebruikt. Verwijderde standaardopties zet je met één tik terug. Alle instellingen worden op dit apparaat onthouden.</p>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -422,7 +422,7 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.24'; // ophogen bij elke wijziging
+const VERSIE='1.25'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
@@ -443,11 +443,15 @@ const PLEKKEN=['Langs de kant','In het midden','Onder brug','Bij begroeiing','Ov
 const SETK='vangstlogboek.settings';
 let settings=Object.assign({mode:'auto',palette:'amber',autofetch:true,autoloc:true,dashsize:'normaal',spraak:true,extra:{}},(()=>{try{return JSON.parse(localStorage.getItem(SETK))||{};}catch(e){return {};}})());
 if(!settings.extra||typeof settings.extra!=='object') settings.extra={};
+if(!settings.verborgen||typeof settings.verborgen!=='object') settings.verborgen={}; // verborgen standaardopties per onderdeel
 function saveSettings(){try{localStorage.setItem(SETK,JSON.stringify(settings));}catch(e){}}
 // eigen opties per onderdeel
 const DELEN={soort:'Vissoort',techniek:'Techniek',aastype:'Kunstaas',merk_Shad:'Merk (Shad)',merk_Plug:'Merk (Plug)',kleur:'Kleur',plek:'Plek'};
 const extra=k=>Array.isArray(settings.extra[k])?settings.extra[k]:[];
-function metExtra(base,k){const e=extra(k).filter(x=>!base.includes(x));const i=base.indexOf('Overig');return i<0?base.concat(e):base.slice(0,i).concat(e,base.slice(i));}
+const verborgen=k=>Array.isArray(settings.verborgen[k])?settings.verborgen[k]:[];
+// alles=true: ook verborgen standaardopties (voor dashboard en historie). 'Overig' blijft altijd staan.
+function metExtra(base,k,alles){const e=extra(k).filter(x=>!base.includes(x));const v=alles?[]:verborgen(k);const b=base.filter(x=>x==='Overig'||!v.includes(x));const i=b.indexOf('Overig');return i<0?b.concat(e):b.slice(0,i).concat(e,b.slice(i));}
+const voorkeur=(lijst,def)=>lijst.includes(def)?def:(lijst.find(x=>x!=='Overig')||'');
 const soortLijst=()=>metExtra(SOORTEN,'soort');
 const techLijst=()=>metExtra(TECHNIEK,'techniek');
 const aasLijst=()=>metExtra(AASTYPES,'aastype');
@@ -484,12 +488,12 @@ function nowLocal(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth
 function fmtDate(iso){const d=new Date(iso);if(isNaN(d))return iso;return pad(d.getDate())+'-'+pad(d.getMonth()+1)+'-'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
-chips('soort',soortLijst(),'Snoek');
+chips('soort',soortLijst(),voorkeur(soortLijst(),'Snoek'));
 chips('wind',WINDGRID,'ZW');
 chips('regen',REGEN,'Droog');
 chips('trend',TREND,'Stabiel');
 chips('aanbeten',AANBETEN,'');
-chips('techniek',techLijst(),'Jiggen');
+chips('techniek',techLijst(),voorkeur(techLijst(),'Jiggen'));
 function renderTechEigen(){ $('#techeigenbox').hidden=sel('techniek')!=='Overig'; }
 $('#techniek').addEventListener('click',e=>{if(e.target.closest('.chip'))renderTechEigen();});
 function setTech(k){
@@ -499,7 +503,7 @@ function setTech(k){
   renderTechEigen();
 }
 function readTech(){ const k=sel('techniek'); return k==='Overig'?($('#techeigen').value.trim()||'Overig'):k; }
-chips('kleur',kleurLijst(),'Grijs-Wit');
+chips('kleur',kleurLijst(),voorkeur(kleurLijst(),'Grijs-Wit'));
 function renderKleurEigen(){ $('#kleureigenbox').hidden=sel('kleur')!=='Overig'; }
 $('#kleur').addEventListener('click',e=>{if(e.target.closest('.chip'))renderKleurEigen();});
 function setKleur(k){
@@ -543,11 +547,12 @@ function readPlek(){ const k=sel('plek'); return k==='Overig'?($('#plekeigen').v
 // keuzes opnieuw opbouwen na wijzigen eigen opties (huidige keuze blijft staan)
 function bouwKeuzes(){
   const so=sel('soort'), te=readTech(), kl=readKleur(), at=sel('aastype'), me=readMerk(), pl=readPlek();
-  chips('soort',soortLijst(),so);
-  chips('techniek',techLijst(),''); setTech(te);
-  chips('kleur',kleurLijst(),''); setKleur(kl);
-  chips('aastype',aasLijst(),aasLijst().includes(at)?at:''); renderAas(me);
-  chips('plek',plekLijst(),'',true); setPlek(pl);
+  chips('soort',soortLijst(),soortLijst().includes(so)?so:voorkeur(soortLijst(),'Snoek'));
+  const weg=(k,v)=>verborgen(k).includes(v); // net verwijderde standaardoptie niet als 'Overig' laten staan
+  chips('techniek',techLijst(),''); setTech(weg('techniek',te)?voorkeur(techLijst(),'Jiggen'):te);
+  chips('kleur',kleurLijst(),''); setKleur(weg('kleur',kl)?voorkeur(kleurLijst(),'Grijs-Wit'):kl);
+  chips('aastype',aasLijst(),aasLijst().includes(at)?at:''); renderAas(weg('merk_'+at,me)?'':me);
+  chips('plek',plekLijst(),'',true); setPlek(weg('plek',pl)?'':pl);
 }
 $('#datum').value=nowLocal();
 [['temp','tempv',' °C'],['bft','bftv',' Bft'],['druk','drukv',' hPa']].forEach(([i,o,u])=>{
@@ -611,24 +616,33 @@ function renderSettings(){
 function renderOpties(){
   const d=$('#optdeel');
   if(!d.options.length) Object.entries(DELEN).forEach(([k,n])=>d.appendChild(Object.assign(document.createElement('option'),{value:k,textContent:n})));
-  const box=$('#optlijst'); box.textContent='';
-  Object.entries(DELEN).forEach(([k,n])=>{
-    const e=extra(k); if(!e.length)return;
-    const kop=document.createElement('span'); kop.className='f'; kop.textContent=n; box.appendChild(kop);
-    const c=document.createElement('div'); c.className='chips';
-    e.forEach(v=>{
-      const b=document.createElement('button'); b.type='button'; b.className='chip sm'; b.textContent=v+' ✕';
-      b.setAttribute('aria-label',v+' verwijderen');
-      b.addEventListener('click',()=>{ if(!confirm('"'+v+'" verwijderen uit '+n.toLowerCase()+'?'))return;
-        settings.extra[k]=extra(k).filter(x=>x!==v); saveSettings(); bouwKeuzes(); renderOpties(); });
-      c.appendChild(b);
-    });
-    box.appendChild(c);
+  const k=d.value||'soort', n=DELEN[k], box=$('#optlijst'); box.textContent='';
+  const lijst=metExtra(basisLijst(k),k).filter(x=>x!=='Overig');
+  const kop=(t)=>{const e=document.createElement('span'); e.className='f'; e.textContent=t; box.appendChild(e);};
+  const rij=(items,label,klik)=>{const c=document.createElement('div'); c.className='chips';
+    items.forEach(v=>{const b=document.createElement('button'); b.type='button'; b.className='chip sm'; b.textContent=label(v);
+      b.addEventListener('click',()=>klik(v)); c.appendChild(b);}); box.appendChild(c);};
+  kop('Opties bij '+n.toLowerCase()+' (tik om te verwijderen)');
+  rij(lijst,v=>v+' ✕',v=>{
+    if(lijst.length<=1&&!basisLijst(k).includes('Overig')){toast('Er moet minstens één optie overblijven');return;}
+    if(!confirm('"'+v+'" verwijderen uit '+n.toLowerCase()+'?'))return;
+    if(extra(k).includes(v)) settings.extra[k]=extra(k).filter(x=>x!==v);
+    else settings.verborgen[k]=verborgen(k).concat([v]);
+    saveSettings(); bouwKeuzes(); renderOpties();
   });
+  const weg=verborgen(k).filter(x=>basisLijst(k).includes(x));
+  if(weg.length){
+    kop('Verwijderde standaardopties (tik om terug te zetten)');
+    rij(weg,v=>'+ '+v,v=>{ settings.verborgen[k]=verborgen(k).filter(x=>x!==v); saveSettings(); bouwKeuzes(); renderOpties(); toast('"'+v+'" teruggezet'); });
+  }
+  if(basisLijst(k).includes('Overig')){ const p=document.createElement('p'); p.className='note'; p.style.margin='8px 0 0'; p.textContent='Overig (zelf invullen) blijft altijd beschikbaar.'; box.appendChild(p); }
 }
+$('#optdeel').addEventListener('change',renderOpties);
 $('#optadd').addEventListener('click',()=>{
   const k=$('#optdeel').value, v=$('#optnieuw').value.trim().replace(/\s+/g,' ');
   if(!v){toast('Vul een optie in');return;}
+  const terug=verborgen(k).find(x=>x.toLowerCase()===v.toLowerCase());
+  if(terug){ settings.verborgen[k]=verborgen(k).filter(x=>x!==terug); saveSettings(); $('#optnieuw').value=''; bouwKeuzes(); renderOpties(); toast('"'+terug+'" teruggezet'); return; }
   const alle=basisLijst(k).concat(extra(k));
   if(alle.some(x=>x.toLowerCase()===v.toLowerCase())){toast('Deze optie bestaat al');return;}
   settings.extra[k]=extra(k).concat([v]); saveSettings();
@@ -1214,7 +1228,7 @@ function showView(id){
   window.scrollTo(0,0);
 }
 function stopEdit(){
-  editing=null; $('#editbar').hidden=true; $('#save').textContent='Vangst opslaan'; resetForm(); renderAdd();
+  editing=null; if(document.querySelectorAll('#soort .chip').length!==soortLijst().length) chips('soort',soortLijst(),voorkeur(soortLijst(),'Snoek')); $('#editbar').hidden=true; $('#save').textContent='Vangst opslaan'; resetForm(); renderAdd();
 }
 $('#save').addEventListener('click',()=>{
   if(!user){renderLogin();return;}
@@ -1243,7 +1257,7 @@ $('#cancel').addEventListener('click',stopEdit);
 function edit(id){
   const c=catches.find(x=>x.id===id); if(!c)return;
   editing=c;
-  setChip('soort',c.soort||'Snoek');
+  if(c.soort&&!soortLijst().includes(c.soort)) chips('soort',soortLijst().concat([c.soort]),c.soort); else setChip('soort',c.soort||voorkeur(soortLijst(),'Snoek'));
   $('#datum').value=String(c.datum||'').slice(0,16)||nowLocal();
   $('#lengte').value=c.lengte??'';
   const ses=sesById(c.sessieId);
@@ -1398,7 +1412,7 @@ function rose(arr){
 }
 function renderDash(){
   const f=$('#dfilt'); f.innerHTML='';
-  ['Alle',...soortLijst()].forEach(v=>{const b=document.createElement('button');b.type='button';b.className='chip sm'+(v===dashFilter?' on':'');b.textContent=v;b.addEventListener('click',()=>{dashFilter=v;renderDash();});f.appendChild(b);});
+  ['Alle',...metExtra(SOORTEN,'soort',true)].forEach(v=>{const b=document.createElement('button');b.type='button';b.className='chip sm'+(v===dashFilter?' on':'');b.textContent=v;b.addEventListener('click',()=>{dashFilter=v;renderDash();});f.appendChild(b);});
   const vis=catches;
   const list=dashFilter==='Alle'?vis:vis.filter(c=>c.soort===dashFilter);
   const d=$('#dash');
@@ -1447,7 +1461,7 @@ function renderDash(){
   const byTe=count(list,c=>c.techniek==='Anders'?'Overig':c.techniek);
   const byK=count(list,c=>c.kleur==='Anders'?'Overig':c.kleur);
   const byA=count(list,c=>c.aas).slice(0,8);
-  const byS=count(list,c=>c.soort,soortLijst());
+  const byS=count(list,c=>c.soort,metExtra(SOORTEN,'soort',true));
   const byL=count(list,c=>c.locatie||c.plaats).slice(0,8);
   const big=list.filter(c=>c.lengte).sort((a,b)=>b.lengte-a.lengte)[0];
   d.innerHTML=`
