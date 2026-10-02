@@ -374,7 +374,7 @@ nav button{font-size:.72rem}
         <button type="button" class="btn" id="optadd">Toevoegen</button>
       </div>
       <div id="optlijst"></div>
-      <p class="note" style="margin:10px 0 0">Kies een onderdeel om de opties te zien. Je kunt zowel standaard- als eigen opties verwijderen; verwijderde standaardopties zet je met één tik terug. Vangsten die je al hebt vastgelegd blijven ongewijzigd.</p>
+      <p class="note" style="margin:10px 0 0">Kies een onderdeel om de opties en de standaardkeuze te zien. De standaardkeuze wordt ingevuld bij het openen van de app en bij elke nieuwe visdag. Je kunt zowel standaard- als eigen opties verwijderen; verwijderde standaardopties zet je met één tik terug. Vangsten die je al hebt vastgelegd blijven ongewijzigd.</p>
     </div>
     <p class="note">Alle instellingen worden op dit apparaat onthouden.</p>
     <h2>Over deze app</h2>
@@ -413,7 +413,7 @@ nav button{font-size:.72rem}
     <h2>8. Back-up</h2>
     <p>Gegevens staan alleen op dit apparaat, in deze browser. Maak regelmatig een back-up via <b>Exporteer als CSV</b> in het logboek. Met <b>Importeer CSV</b> zet je een back-up terug; dubbele regels worden overgeslagen.</p>
     <h2>9. Instellingen</h2>
-    <p>Weergave (licht, donker, automatisch), accentkleur, grootte dashboard, het automatisch ophalen van locatie en weer en spraakinvoer aan/uit. Bij <b>Keuzeopties</b> voeg je zelf keuzes toe aan vissoort, techniek, kunstaas, merk, kleur en plek, of verwijder je opties (ook de standaardopties) die je niet gebruikt. Verwijderde standaardopties zet je met één tik terug. Alle instellingen worden op dit apparaat onthouden.</p>
+    <p>Weergave (licht, donker, automatisch), accentkleur, grootte dashboard, het automatisch ophalen van locatie en weer en spraakinvoer aan/uit. Bij <b>Keuzeopties</b> voeg je zelf keuzes toe aan vissoort, techniek, kunstaas, merk, kleur en plek, of verwijder je opties (ook de standaardopties) die je niet gebruikt. Per onderdeel stel je ook de <b>standaardkeuze</b> in; die wordt ingevuld bij het openen van de app en bij elke nieuwe visdag. Verwijderde standaardopties zet je met één tik terug. Alle instellingen worden op dit apparaat onthouden.</p>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -422,7 +422,7 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.25'; // ophogen bij elke wijziging
+const VERSIE='1.26'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
@@ -443,7 +443,8 @@ const PLEKKEN=['Langs de kant','In het midden','Onder brug','Bij begroeiing','Ov
 const SETK='vangstlogboek.settings';
 let settings=Object.assign({mode:'auto',palette:'amber',autofetch:true,autoloc:true,dashsize:'normaal',spraak:true,extra:{}},(()=>{try{return JSON.parse(localStorage.getItem(SETK))||{};}catch(e){return {};}})());
 if(!settings.extra||typeof settings.extra!=='object') settings.extra={};
-if(!settings.verborgen||typeof settings.verborgen!=='object') settings.verborgen={}; // verborgen standaardopties per onderdeel
+if(!settings.verborgen||typeof settings.verborgen!=='object') settings.verborgen={};
+if(!settings.standaard||typeof settings.standaard!=='object') settings.standaard={}; // eigen standaardkeuze per onderdeel // verborgen standaardopties per onderdeel
 function saveSettings(){try{localStorage.setItem(SETK,JSON.stringify(settings));}catch(e){}}
 // eigen opties per onderdeel
 const DELEN={soort:'Vissoort',techniek:'Techniek',aastype:'Kunstaas',merk_Shad:'Merk (Shad)',merk_Plug:'Merk (Plug)',kleur:'Kleur',plek:'Plek'};
@@ -452,6 +453,13 @@ const verborgen=k=>Array.isArray(settings.verborgen[k])?settings.verborgen[k]:[]
 // alles=true: ook verborgen standaardopties (voor dashboard en historie). 'Overig' blijft altijd staan.
 function metExtra(base,k,alles){const e=extra(k).filter(x=>!base.includes(x));const v=alles?[]:verborgen(k);const b=base.filter(x=>x==='Overig'||!v.includes(x));const i=b.indexOf('Overig');return i<0?b.concat(e):b.slice(0,i).concat(e,b.slice(i));}
 const voorkeur=(lijst,def)=>lijst.includes(def)?def:(lijst.find(x=>x!=='Overig')||'');
+// standaardkeuze: eigen keuze uit instellingen, anders de vaste standaard
+const VAST={soort:'Snoek',techniek:'Jiggen',kleur:'Grijs-Wit'};
+function stdKeuze(k){
+  const lijst=metExtra(basisLijst(k),k), v=settings.standaard[k];
+  if(typeof v==='string'&&(v===''?k!=='soort':lijst.includes(v))) return v;
+  return VAST[k]?voorkeur(lijst,VAST[k]):'';
+}
 const soortLijst=()=>metExtra(SOORTEN,'soort');
 const techLijst=()=>metExtra(TECHNIEK,'techniek');
 const aasLijst=()=>metExtra(AASTYPES,'aastype');
@@ -488,12 +496,12 @@ function nowLocal(){const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth
 function fmtDate(iso){const d=new Date(iso);if(isNaN(d))return iso;return pad(d.getDate())+'-'+pad(d.getMonth()+1)+'-'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes());}
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
-chips('soort',soortLijst(),voorkeur(soortLijst(),'Snoek'));
+chips('soort',soortLijst(),stdKeuze('soort'));
 chips('wind',WINDGRID,'ZW');
 chips('regen',REGEN,'Droog');
 chips('trend',TREND,'Stabiel');
 chips('aanbeten',AANBETEN,'');
-chips('techniek',techLijst(),voorkeur(techLijst(),'Jiggen'));
+chips('techniek',techLijst(),stdKeuze('techniek'));
 function renderTechEigen(){ $('#techeigenbox').hidden=sel('techniek')!=='Overig'; }
 $('#techniek').addEventListener('click',e=>{if(e.target.closest('.chip'))renderTechEigen();});
 function setTech(k){
@@ -503,7 +511,7 @@ function setTech(k){
   renderTechEigen();
 }
 function readTech(){ const k=sel('techniek'); return k==='Overig'?($('#techeigen').value.trim()||'Overig'):k; }
-chips('kleur',kleurLijst(),voorkeur(kleurLijst(),'Grijs-Wit'));
+chips('kleur',kleurLijst(),stdKeuze('kleur'));
 function renderKleurEigen(){ $('#kleureigenbox').hidden=sel('kleur')!=='Overig'; }
 $('#kleur').addEventListener('click',e=>{if(e.target.closest('.chip'))renderKleurEigen();});
 function setKleur(k){
@@ -513,7 +521,7 @@ function setKleur(k){
   renderKleurEigen();
 }
 function readKleur(){ const k=sel('kleur'); return k==='Overig'?($('#kleureigen').value.trim()||'Overig'):k; }
-chips('aastype',aasLijst(),'');
+chips('aastype',aasLijst(),stdKeuze('aastype'));
 function renderMerkEigen(){ $('#merkeigenbox').hidden=sel('merk')!=='Overig'; }
 function renderAas(merk){
   const t=sel('aastype');
@@ -526,15 +534,15 @@ function renderAas(merk){
   chips('merk',lijst||[],kies);
   renderMerkEigen();
 }
-$('#aastype').addEventListener('click',e=>{if(e.target.closest('.chip'))renderAas('');});
+$('#aastype').addEventListener('click',e=>{if(e.target.closest('.chip'))renderAas(stdKeuze('merk_'+sel('aastype')));});
 $('#merk').addEventListener('click',e=>{if(e.target.closest('.chip'))renderMerkEigen();});
 function readMerk(){
   if(!merkLijst(sel('aastype')))return '';
   const m=sel('merk');
   return m==='Overig'?($('#merkeigen').value.trim()||'Overig'):m;
 }
-renderAas();
-chips('plek',plekLijst(),'',true);
+renderAas(stdKeuze('merk_'+sel('aastype')));
+chips('plek',plekLijst(),stdKeuze('plek'),true);
 function renderPlekEigen(){ $('#plekeigenbox').hidden=sel('plek')!=='Overig'; }
 $('#plek').addEventListener('click',e=>{if(e.target.closest('.chip'))renderPlekEigen();});
 function setPlek(k){
@@ -547,12 +555,16 @@ function readPlek(){ const k=sel('plek'); return k==='Overig'?($('#plekeigen').v
 // keuzes opnieuw opbouwen na wijzigen eigen opties (huidige keuze blijft staan)
 function bouwKeuzes(){
   const so=sel('soort'), te=readTech(), kl=readKleur(), at=sel('aastype'), me=readMerk(), pl=readPlek();
-  chips('soort',soortLijst(),soortLijst().includes(so)?so:voorkeur(soortLijst(),'Snoek'));
+  chips('soort',soortLijst(),soortLijst().includes(so)?so:stdKeuze('soort'));
   const weg=(k,v)=>verborgen(k).includes(v); // net verwijderde standaardoptie niet als 'Overig' laten staan
-  chips('techniek',techLijst(),''); setTech(weg('techniek',te)?voorkeur(techLijst(),'Jiggen'):te);
-  chips('kleur',kleurLijst(),''); setKleur(weg('kleur',kl)?voorkeur(kleurLijst(),'Grijs-Wit'):kl);
-  chips('aastype',aasLijst(),aasLijst().includes(at)?at:''); renderAas(weg('merk_'+at,me)?'':me);
-  chips('plek',plekLijst(),'',true); setPlek(weg('plek',pl)?'':pl);
+  chips('techniek',techLijst(),''); setTech(weg('techniek',te)?stdKeuze('techniek'):te);
+  chips('kleur',kleurLijst(),''); setKleur(weg('kleur',kl)?stdKeuze('kleur'):kl);
+  chips('aastype',aasLijst(),aasLijst().includes(at)?at:stdKeuze('aastype')); renderAas(weg('merk_'+at,me)?stdKeuze('merk_'+sel('aastype')):me);
+  chips('plek',plekLijst(),'',true); setPlek(weg('plek',pl)?stdKeuze('plek'):pl);
+}
+function pasStandaardToe(){
+  setChip('soort',stdKeuze('soort')); setTech(stdKeuze('techniek')); setKleur(stdKeuze('kleur'));
+  setChip('aastype',stdKeuze('aastype')); renderAas(stdKeuze('merk_'+sel('aastype'))); setPlek(stdKeuze('plek'));
 }
 $('#datum').value=nowLocal();
 [['temp','tempv',' °C'],['bft','bftv',' Bft'],['druk','drukv',' hPa']].forEach(([i,o,u])=>{
@@ -626,10 +638,19 @@ function renderOpties(){
   rij(lijst,v=>v+' ✕',v=>{
     if(lijst.length<=1&&!basisLijst(k).includes('Overig')){toast('Er moet minstens één optie overblijven');return;}
     if(!confirm('"'+v+'" verwijderen uit '+n.toLowerCase()+'?'))return;
+    if(settings.standaard[k]===v) delete settings.standaard[k];
     if(extra(k).includes(v)) settings.extra[k]=extra(k).filter(x=>x!==v);
     else settings.verborgen[k]=verborgen(k).concat([v]);
     saveSettings(); bouwKeuzes(); renderOpties();
   });
+  kop('Standaardkeuze bij '+n.toLowerCase());
+  const huidig=stdKeuze(k), keuzes=(k==='soort'?[]:['']).concat(metExtra(basisLijst(k),k));
+  const sc=document.createElement('div'); sc.className='chips';
+  keuzes.forEach(v=>{const b=document.createElement('button'); b.type='button'; b.className='chip sm'+(v===huidig?' on':'');
+    b.textContent=v===''?'Geen':v; b.setAttribute('aria-pressed',v===huidig?'true':'false');
+    b.addEventListener('click',()=>{ settings.standaard[k]=v; saveSettings(); if(!editing){ if(k.startsWith('merk_')){ if(sel('aastype')===k.slice(5)) renderAas(v); } else pasStandaardToe(); } renderOpties(); toast('Standaard '+n.toLowerCase()+': '+(v||'geen')); });
+    sc.appendChild(b);});
+  box.appendChild(sc);
   const weg=verborgen(k).filter(x=>basisLijst(k).includes(x));
   if(weg.length){
     kop('Verwijderde standaardopties (tik om terug te zetten)');
@@ -1125,6 +1146,7 @@ $('#sessave').addEventListener('click',()=>{
   }else{
     const ses=Object.assign({id:newId('s')},data);
     sessions.push(ses); if(!ses.eind) active=ses;
+    if(!editing) pasStandaardToe();
     if(ses.eind){ sortSessions(); sesSave(); $('#sesmodal').classList.remove('on'); setDoel(ses); setCatches(catches); toast('Visdag opgeslagen. Voeg nu de vangsten toe.'); return; }
     toast('Visdag gestart');
   }
@@ -1219,7 +1241,7 @@ function readForm(){
 }
 function resetForm(){
   $('#lengte').value=''; $('#stek').value=''; $('#notitie').value=''; $('#heard').textContent='';
-  $('#datum').value=doel?($('#datum').value||String(doel.datum).slice(0,16)):nowLocal(); setPlek('');
+  $('#datum').value=doel?($('#datum').value||String(doel.datum).slice(0,16)):nowLocal(); setPlek(stdKeuze('plek'));
 }
 function showView(id){
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x.dataset.v===id));
@@ -1228,7 +1250,7 @@ function showView(id){
   window.scrollTo(0,0);
 }
 function stopEdit(){
-  editing=null; if(document.querySelectorAll('#soort .chip').length!==soortLijst().length) chips('soort',soortLijst(),voorkeur(soortLijst(),'Snoek')); $('#editbar').hidden=true; $('#save').textContent='Vangst opslaan'; resetForm(); renderAdd();
+  editing=null; if(document.querySelectorAll('#soort .chip').length!==soortLijst().length) chips('soort',soortLijst(),stdKeuze('soort')); $('#editbar').hidden=true; $('#save').textContent='Vangst opslaan'; resetForm(); renderAdd();
 }
 $('#save').addEventListener('click',()=>{
   if(!user){renderLogin();return;}
@@ -1257,7 +1279,7 @@ $('#cancel').addEventListener('click',stopEdit);
 function edit(id){
   const c=catches.find(x=>x.id===id); if(!c)return;
   editing=c;
-  if(c.soort&&!soortLijst().includes(c.soort)) chips('soort',soortLijst().concat([c.soort]),c.soort); else setChip('soort',c.soort||voorkeur(soortLijst(),'Snoek'));
+  if(c.soort&&!soortLijst().includes(c.soort)) chips('soort',soortLijst().concat([c.soort]),c.soort); else setChip('soort',c.soort||stdKeuze('soort'));
   $('#datum').value=String(c.datum||'').slice(0,16)||nowLocal();
   $('#lengte').value=c.lengte??'';
   const ses=sesById(c.sessieId);
