@@ -422,7 +422,7 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.26'; // ophogen bij elke wijziging
+const VERSIE='1.27'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
@@ -1254,9 +1254,14 @@ function stopEdit(){
 }
 $('#save').addEventListener('click',()=>{
   if(!user){renderLogin();return;}
-  const ses = editing ? sesById(editing.sessieId) : (doel||active);
-  if(!ses){toast('Start eerst een visdag');return;}
+  let ses = editing ? sesById(editing.sessieId) : (doel||active);
   const f=readForm();
+  let auto=null;
+  if(!editing&&!doel&&f.datum&&(!active||f.datum<String(active.datum).slice(0,16))){
+    auto=sessions.find(x=>x.eind&&x.id!==(active&&active.id)&&f.datum>=String(x.datum).slice(0,16)&&f.datum<=String(x.eind).slice(0,16))||null;
+    if(auto) ses=auto;
+  }
+  if(!ses){toast('Start eerst een visdag');return;}
   if(!f.soort){toast('Kies een vissoort');return;}
   const fout=keurVangst(f,ses);
   if(fout){toast(fout);return;}
@@ -1272,7 +1277,7 @@ $('#save').addEventListener('click',()=>{
   }
   rec.id=newId('l');
   catches.unshift(rec); lsSave(); setCatches(catches);
-  toast(rec.soort+' opgeslagen'); resetForm();
+  toast(rec.soort+' opgeslagen'+(auto?' bij visdag van '+fmtDag(auto.datum):'')); resetForm();
 });
 $('#cancel').addEventListener('click',stopEdit);
 
