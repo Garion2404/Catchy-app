@@ -130,6 +130,18 @@ nav button{font-size:.72rem}
 .rose{display:block;margin:0 auto;max-width:240px;width:100%}
 .filt{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px}
 .filt .chip{flex-shrink:0}
+.fotobtn{display:flex;align-items:center;gap:10px;width:100%;border:1px dashed var(--line);background:var(--chip);color:var(--ink);border-radius:12px;padding:12px 14px;font:inherit;font-size:.95rem;font-weight:600;cursor:pointer;text-align:left}
+.fotobtn svg{width:24px;height:24px;flex-shrink:0;stroke:var(--accent);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fotoprev{display:flex;gap:14px;align-items:center}
+.fotoprev[hidden],.fotobtn[hidden]{display:none}
+.fotoprev img{width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;background:var(--soft)}
+.fotoprev .acties{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.linkbtn.danger{color:var(--danger)}
+.entry .thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;margin:0 0 6px auto;cursor:zoom-in;background:var(--soft)}
+.fotoview{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;z-index:30;padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom))}
+.fotoview.on{display:flex}
+.fotoview img{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px}
+.fotoview .close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px}
 .note{font-size:.8rem;color:var(--muted)}
 #v-dash{zoom:var(--dz,1)}
 .help h2{margin-top:18px}
@@ -222,6 +234,13 @@ nav button{font-size:.72rem}
         <textarea id="notitie" maxlength="500" placeholder="Diepte, bodem, hoe de aanbeet was&hellip;"></textarea>
         <button type="button" class="mic" data-for="notitie" aria-label="Spreek notitie in"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
       </div>
+      <span class="f">Foto</span>
+      <button type="button" class="fotobtn" id="fotoknop"><svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><span>Foto maken of kiezen</span></button>
+      <div class="fotoprev" id="fotoprev" hidden>
+        <img id="fotoimg" alt="Foto van de vangst">
+        <div class="acties"><button type="button" class="linkbtn" id="fotowissel">Andere foto</button><button type="button" class="linkbtn danger" id="fotowis">Foto verwijderen</button></div>
+      </div>
+      <input type="file" id="fotofile" accept="image/*" hidden>
     </div>
     <button class="btn" id="save">Vangst opslaan</button>
     <button class="btn ghost" id="closeses">Visdag afsluiten</button>
@@ -244,6 +263,11 @@ nav button{font-size:.72rem}
   <button class="btn ghost" id="import">Importeer CSV (back-up terugzetten)</button>
   <input type="file" id="importfile" accept=".csv,text/csv" hidden>
   <p class="note">Importeren voegt vangsten toe; dubbele regels (zelfde datum, soort en lengte) worden overgeslagen.</p>
+  <h2>Foto's</h2>
+  <button class="btn ghost" id="fotoexport" style="margin-top:0">Exporteer foto's (zip)</button>
+  <button class="btn ghost" id="fotoimport">Importeer foto's (zip)</button>
+  <input type="file" id="fotoimportfile" accept=".zip,application/zip" hidden>
+  <p class="note" id="fotonote"></p>
 </section>
 
 <!-- ============ DASHBOARD ============ -->
@@ -400,6 +424,7 @@ nav button{font-size:.72rem}
       <li>Kies techniek (bij Overig vul je de techniek zelf in) en kunstaas (Shad, Plug of Overig). Bij Shad of Plug kies je daarna het merk (bij Overig vul je het merk zelf in); bij Overig vul je het kunstaas zelf in. Kies daarna de kleur (bij Overig vul je de kleur zelf in) en voeg eventueel een notitie toe.</li>
       <li>Kies bij <b>Plek</b> waar je de vis ving, bijvoorbeeld langs de kant, in het midden of onder een brug (optioneel; tik nogmaals om de keuze te wissen).</li>
       <li>Stek alleen invullen als je bent verplaatst; leeg = hoofdlocatie van de visdag.</li>
+      <li>Tik eventueel op <b>Foto maken of kiezen</b> om een foto bij de vangst te bewaren. De foto wordt verkleind opgeslagen. In het logboek tik je op de miniatuur om hem groot te bekijken.</li>
       <li>Tik op <b>Vangst opslaan</b>.</li>
     </ul>
     <h2>4. Inspreken</h2>
@@ -412,17 +437,19 @@ nav button{font-size:.72rem}
     <p>Het dashboard toont verbanden tussen weer, seizoen, techniek en vangst. Filter bovenaan op vissoort. De grootte stel je in via Instellingen › Grootte dashboard.</p>
     <h2>8. Back-up</h2>
     <p>Gegevens staan alleen op dit apparaat, in deze browser. Maak regelmatig een back-up via <b>Exporteer als CSV</b> in het logboek. Met <b>Importeer CSV</b> zet je een back-up terug; dubbele regels worden overgeslagen.</p>
+    <p>Foto's zitten niet in de CSV. Maak daarvoor een aparte back-up met <b>Exporteer foto's (zip)</b> in het logboek. Met <b>Importeer foto's (zip)</b> zet je ze terug; ze worden gekoppeld aan vangsten met dezelfde datum, soort en lengte, dus importeer eerst de CSV. Tip: zet de app op je beginscherm (Deel › Zet op beginscherm), dan wist Safari je gegevens niet als je de app een tijd niet opent.</p>
     <h2>9. Instellingen</h2>
     <p>Weergave (licht, donker, automatisch), accentkleur, grootte dashboard, het automatisch ophalen van locatie en weer en spraakinvoer aan/uit. Bij <b>Keuzeopties</b> voeg je zelf keuzes toe aan vissoort, techniek, kunstaas, merk, kleur en plek, of verwijder je opties (ook de standaardopties) die je niet gebruikt. Per onderdeel stel je ook de <b>standaardkeuze</b> in; die wordt ingevuld bij het openen van de app en bij elke nieuwe visdag. Verwijderde standaardopties zet je met één tik terug. Alle instellingen worden op dit apparaat onthouden.</p>
   </div>
 </div>
+<div class="fotoview" id="fotoview" role="dialog" aria-label="Foto"><button type="button" class="close" id="fotoviewclose">Sluiten</button><img id="fotoviewimg" alt="Foto van de vangst"></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.27'; // ophogen bij elke wijziging
+const VERSIE='1.28'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
@@ -700,7 +727,7 @@ async function hash(str){
   return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 function startApp(u){
-  user=u; localStorage.setItem(CUR,u.id);
+  user=u; localStorage.setItem(CUR,u.id); resetFoto();
   // eenmalig: oude vangsten (zonder account) overzetten naar de eerste visser
   try{ const old=localStorage.getItem(LS_OLD); if(old&&!localStorage.getItem(LS())){ localStorage.setItem(LS(),old); localStorage.removeItem(LS_OLD); } }catch(e){}
   $('#storage-note').textContent='Vangsten van '+u.naam+' worden lokaal op dit apparaat bewaard. Maak af en toe een CSV-export als back-up.';
@@ -1170,6 +1197,7 @@ function removeSession(id){
   if(!confirm(n?'Deze visdag en de '+n+' gekoppelde vangst(en) verwijderen?':'Deze visdag verwijderen?'))return;
   if(editing&&editing.sessieId===id) stopEdit();
   if(doel&&doel.id===id) doel=null;
+  sesCatches(id).forEach(c=>{fotoDel(c.id);dropThumb(c.id);});
   sessions=sessions.filter(x=>x.id!==id); catches=catches.filter(c=>c.sessieId!==id);
   if(active&&active.id===id) active=null;
   sesSave(); lsSave(); setCatches(catches); toast('Visdag verwijderd');
@@ -1240,7 +1268,7 @@ function readForm(){
     notitie:$('#notitie').value.trim(), maand:new Date(datum).getMonth()+1};
 }
 function resetForm(){
-  $('#lengte').value=''; $('#stek').value=''; $('#notitie').value=''; $('#heard').textContent='';
+  $('#lengte').value=''; $('#stek').value=''; $('#notitie').value=''; $('#heard').textContent=''; resetFoto();
   $('#datum').value=doel?($('#datum').value||String(doel.datum).slice(0,16)):nowLocal(); setPlek(stdKeuze('plek'));
 }
 function showView(id){
@@ -1270,20 +1298,21 @@ $('#save').addEventListener('click',()=>{
   rec.locatie=f.stek||ses.locatie; delete rec.stek;
   rec.lat=ses.lat; rec.lon=ses.lon; rec.plaats=ses.plaats||'';
   WEERV.forEach(k=>rec[k]=ses[k]);
+  const pf=pendFoto; if(pf) rec.foto=true; else if(pf===null) delete rec.foto;
   if(editing){
     rec.id=editing.id;
-    catches=catches.map(c=>c.id===rec.id?rec:c); lsSave(); setCatches(catches);
+    catches=catches.map(c=>c.id===rec.id?rec:c); lsSave(); setCatches(catches); schrijfFoto(rec.id,pf);
     toast('Wijziging opgeslagen'); stopEdit(); showView('v-log'); return;
   }
   rec.id=newId('l');
-  catches.unshift(rec); lsSave(); setCatches(catches);
+  catches.unshift(rec); lsSave(); setCatches(catches); schrijfFoto(rec.id,pf);
   toast(rec.soort+' opgeslagen'+(auto?' bij visdag van '+fmtDag(auto.datum):'')); resetForm();
 });
 $('#cancel').addEventListener('click',stopEdit);
 
 function edit(id){
   const c=catches.find(x=>x.id===id); if(!c)return;
-  editing=c;
+  editing=c; laadFotoForm(c);
   if(c.soort&&!soortLijst().includes(c.soort)) chips('soort',soortLijst().concat([c.soort]),c.soort); else setChip('soort',c.soort||stdKeuze('soort'));
   $('#datum').value=String(c.datum||'').slice(0,16)||nowLocal();
   $('#lengte').value=c.lengte??'';
@@ -1300,8 +1329,222 @@ function edit(id){
 function remove(id){
   if(!confirm('Deze vangst verwijderen?'))return;
   if(editing&&editing.id===id) stopEdit();
-  catches=catches.filter(c=>c.id!==id); lsSave(); setCatches(catches); toast('Verwijderd');
+  catches=catches.filter(c=>c.id!==id); lsSave(); setCatches(catches); fotoDel(id); dropThumb(id); toast('Verwijderd');
 }
+
+// ---------- foto's (IndexedDB, per visser) ----------
+const FOTO_DB='vangstlogboek-fotos', FOTO_MAX=1280, FOTO_Q=0.78, THUMB_MAX=200;
+let fotoDbP=null, pendFoto=undefined; // undefined = ongewijzigd, null = verwijderen, {foto,thumb} = nieuw
+let fotoPrevUrl=null, grootUrl=null, persistGevraagd=false;
+const fotoUrls=new Map();
+function fotoDb(){
+  if(!fotoDbP){
+    fotoDbP=new Promise((res,rej)=>{
+      if(!window.indexedDB){rej(new Error('geen IndexedDB'));return;}
+      const r=indexedDB.open(FOTO_DB,1);
+      r.onupgradeneeded=()=>{ if(!r.result.objectStoreNames.contains('fotos')) r.result.createObjectStore('fotos',{keyPath:'k'}); };
+      r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+    });
+    fotoDbP.catch(()=>{fotoDbP=null;});
+  }
+  return fotoDbP;
+}
+const fotoKey=id=>user.id+':'+id;
+async function fotoTx(mode,fn){
+  const db=await fotoDb();
+  return new Promise((res,rej)=>{
+    const t=db.transaction('fotos',mode); let out;
+    const r=fn(t.objectStore('fotos')); if(r) r.onsuccess=()=>{out=r.result;};
+    t.oncomplete=()=>res(out); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error);
+  });
+}
+const fotoRec=id=>fotoTx('readonly',st=>st.get(fotoKey(id))).catch(()=>null);
+async function fotoGet(id,thumb){
+  const r=await fotoRec(id); if(!r) return null;
+  return new Blob([thumb&&r.tbuf?r.tbuf:r.buf],{type:r.type||'image/jpeg'});
+}
+function blobBuf(b){ return b.arrayBuffer?b.arrayBuffer():new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsArrayBuffer(b);}); }
+async function fotoPut(id,p){
+  const buf=await blobBuf(p.foto), tbuf=await blobBuf(p.thumb); // eerst lezen, dan transactie
+  return fotoTx('readwrite',st=>st.put({k:fotoKey(id),user:user.id,type:'image/jpeg',buf,tbuf}));
+}
+const fotoDel=id=>fotoTx('readwrite',st=>st.delete(fotoKey(id))).catch(()=>{});
+function vraagPersist(){
+  if(persistGevraagd) return; persistGevraagd=true;
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
+}
+
+// verkleinen
+function laadBeeld(blob){
+  return new Promise((res,rej)=>{
+    const u=URL.createObjectURL(blob), img=new Image();
+    img.onload=()=>res({img,u}); img.onerror=()=>{URL.revokeObjectURL(u);rej(new Error('beeld'));}; img.src=u;
+  });
+}
+function schaal(img,max,q){
+  const w0=img.naturalWidth||img.width, h0=img.naturalHeight||img.height;
+  const f=Math.min(1,max/Math.max(w0,h0)), w=Math.max(1,Math.round(w0*f)), h=Math.max(1,Math.round(h0*f));
+  const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+  cv.getContext('2d').drawImage(img,0,0,w,h);
+  return new Promise((res,rej)=>cv.toBlob(b=>b?res(b):rej(new Error('jpeg')),'image/jpeg',q));
+}
+async function verwerkFoto(file,origineel){
+  const {img,u}=await laadBeeld(file);
+  try{
+    const foto=origineel?file:await schaal(img,FOTO_MAX,FOTO_Q);
+    const thumb=await schaal(img,THUMB_MAX,0.7);
+    return {foto,thumb};
+  }finally{ URL.revokeObjectURL(u); }
+}
+
+// formulier
+function toonFotoForm(blob){
+  if(fotoPrevUrl){URL.revokeObjectURL(fotoPrevUrl);fotoPrevUrl=null;}
+  $('#fotoprev').hidden=!blob; $('#fotoknop').hidden=!!blob;
+  if(blob){fotoPrevUrl=URL.createObjectURL(blob);$('#fotoimg').src=fotoPrevUrl;} else $('#fotoimg').removeAttribute('src');
+}
+function resetFoto(){ pendFoto=undefined; toonFotoForm(null); }
+async function laadFotoForm(c){
+  resetFoto(); if(!c||!c.foto) return;
+  const b=await fotoGet(c.id,false);
+  if(b&&editing===c&&pendFoto===undefined) toonFotoForm(b);
+}
+async function schrijfFoto(id,p){
+  if(p===undefined) return;
+  dropThumb(id);
+  try{ if(p){ await fotoPut(id,p); vraagPersist(); } else await fotoDel(id); }
+  catch(e){ const c=catches.find(x=>x.id===id); if(c){delete c.foto; lsSave();} toast('Foto kon niet worden opgeslagen'); }
+  renderLog();
+}
+$('#fotoknop').addEventListener('click',()=>$('#fotofile').click());
+$('#fotowissel').addEventListener('click',()=>$('#fotofile').click());
+$('#fotowis').addEventListener('click',()=>{ pendFoto=(editing&&editing.foto)?null:undefined; toonFotoForm(null); });
+$('#fotofile').addEventListener('change',async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{ const p=await verwerkFoto(f,false); pendFoto=p; toonFotoForm(p.foto); }
+  catch(err){ toast('Foto kon niet worden gelezen'); }
+});
+$('#fotoimg').addEventListener('click',()=>{ if(fotoPrevUrl) toonGroot(fotoPrevUrl,false); });
+
+// grote weergave
+function toonGroot(src,eigen){
+  sluitGroot(); if(eigen) grootUrl=src;
+  $('#fotoviewimg').src=src; $('#fotoview').classList.add('on');
+}
+function sluitGroot(){
+  $('#fotoview').classList.remove('on'); $('#fotoviewimg').removeAttribute('src');
+  if(grootUrl){URL.revokeObjectURL(grootUrl);grootUrl=null;}
+}
+$('#fotoview').addEventListener('click',sluitGroot);
+async function openFoto(id){ const b=await fotoGet(id,false); if(b) toonGroot(URL.createObjectURL(b),true); else toast('Foto niet gevonden'); }
+
+// miniaturen in het logboek
+function dropThumb(id){ const u=fotoUrls.get(id); if(u){URL.revokeObjectURL(u);fotoUrls.delete(id);} }
+async function thumbUrl(id){
+  if(fotoUrls.has(id)) return fotoUrls.get(id);
+  const b=await fotoGet(id,true); if(!b) return null;
+  if(fotoUrls.has(id)) return fotoUrls.get(id);
+  const u=URL.createObjectURL(b); fotoUrls.set(id,u); return u;
+}
+function vulThumbs(el){
+  el.querySelectorAll('img[data-foto]').forEach(async im=>{
+    im.addEventListener('click',()=>openFoto(im.dataset.foto));
+    const u=await thumbUrl(im.dataset.foto); if(u) im.src=u; else im.remove();
+  });
+}
+function fotoInfo(){
+  const n=catches.filter(c=>c.foto).length;
+  $('#fotonote').textContent=(n?n+(n===1?' vangst heeft':' vangsten hebben')+' een foto. ':'Nog geen foto\'s. ')+'Foto\'s zitten niet in de CSV-export; maak hiervoor apart een foto-export.';
+}
+
+// zip (ongecomprimeerd; jpg comprimeert toch niet verder)
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u8){let c=0xFFFFFFFF;for(let i=0;i<u8.length;i++)c=CRC_T[(c^u8[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function maakZip(files){ // [{naam,data:Uint8Array}]
+  const enc=new TextEncoder(), delen=[], centraal=[]; let off=0;
+  const d=new Date(), tijd=((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1))&0xFFFF, dag=(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF;
+  files.forEach(f=>{
+    const n=enc.encode(f.naam), crc=crc32(f.data), sz=f.data.length;
+    const h=new DataView(new ArrayBuffer(30));
+    h.setUint32(0,0x04034b50,true); h.setUint16(4,20,true); h.setUint16(6,0x0800,true); h.setUint16(8,0,true);
+    h.setUint16(10,tijd,true); h.setUint16(12,dag,true); h.setUint32(14,crc,true); h.setUint32(18,sz,true); h.setUint32(22,sz,true);
+    h.setUint16(26,n.length,true); h.setUint16(28,0,true);
+    delen.push(h.buffer,n,f.data);
+    const c=new DataView(new ArrayBuffer(46));
+    c.setUint32(0,0x02014b50,true); c.setUint16(4,20,true); c.setUint16(6,20,true); c.setUint16(8,0x0800,true); c.setUint16(10,0,true);
+    c.setUint16(12,tijd,true); c.setUint16(14,dag,true); c.setUint32(16,crc,true); c.setUint32(20,sz,true); c.setUint32(24,sz,true);
+    c.setUint16(28,n.length,true); c.setUint32(42,off,true);
+    centraal.push(c.buffer,n);
+    off+=30+n.length+sz;
+  });
+  const cd=centraal.reduce((t,b)=>t+b.byteLength,0), e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true); e.setUint16(8,files.length,true); e.setUint16(10,files.length,true); e.setUint32(12,cd,true); e.setUint32(16,off,true);
+  return new Blob([...delen,...centraal,e.buffer],{type:'application/zip'});
+}
+async function leesZip(buf){
+  const v=new DataView(buf), u=new Uint8Array(buf), dec=new TextDecoder(); let eocd=-1;
+  for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-65557);i--){ if(v.getUint32(i,true)===0x06054b50){eocd=i;break;} }
+  if(eocd<0) throw new Error('geen zip');
+  const n=v.getUint16(eocd+10,true); let p=v.getUint32(eocd+16,true); const out={};
+  for(let i=0;i<n;i++){
+    if(v.getUint32(p,true)!==0x02014b50) throw new Error('zip');
+    const meth=v.getUint16(p+10,true), csz=v.getUint32(p+20,true), nl=v.getUint16(p+28,true), xl=v.getUint16(p+30,true), cl=v.getUint16(p+32,true), lo=v.getUint32(p+42,true);
+    const naam=dec.decode(u.subarray(p+46,p+46+nl));
+    const start=lo+30+v.getUint16(lo+26,true)+v.getUint16(lo+28,true), data=u.slice(start,start+csz);
+    if(meth===0) out[naam]=data;
+    else if(meth===8&&window.DecompressionStream){ // zip die opnieuw is ingepakt
+      const s=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      out[naam]=new Uint8Array(await new Response(s).arrayBuffer());
+    }
+    p+=46+nl+xl+cl;
+  }
+  return out;
+}
+function bestandSlug(t){return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'x';}
+function fotoNaam(c){
+  const d=String(c.datum||'').slice(0,16).replace('T','_').replace(':','');
+  return 'fotos/'+(d||'onbekend')+'_'+bestandSlug(c.soort)+(c.lengte?'_'+String(c.lengte).replace('.',',')+'cm':'')+'_'+String(c.id).slice(-4)+'.jpg';
+}
+function downloadBlob(blob,naam){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=naam;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),60000);
+}
+const fotoMatch=c=>String(c.datum||'').slice(0,16)+'|'+c.soort+'|'+(c.lengte??'');
+$('#fotoexport').addEventListener('click',async()=>{
+  if(!user){renderLogin();return;}
+  const met=catches.filter(c=>c.foto);
+  if(!met.length){toast('Nog geen foto\'s om te exporteren');return;}
+  try{
+    const files=[], lijst=[];
+    for(const c of met){
+      const r=await fotoRec(c.id); if(!r||!r.buf) continue;
+      const naam=fotoNaam(c);
+      files.push({naam,data:new Uint8Array(r.buf)});
+      lijst.push({bestand:naam,datum:c.datum,soort:c.soort,lengte:c.lengte??null,locatie:c.locatie||''});
+    }
+    if(!files.length){toast('Geen foto\'s gevonden');return;}
+    files.unshift({naam:'fotos.json',data:new TextEncoder().encode(JSON.stringify({app:'Vangstlogboek',inhoud:'fotos',versie:VERSIE,visser:user.naam,fotos:lijst},null,1))});
+    downloadBlob(maakZip(files),'fotos-'+bestandSlug(user.naam)+'.zip');
+    toast(lijst.length+(lijst.length===1?' foto':' foto\'s')+' geëxporteerd');
+  }catch(e){ toast('Exporteren niet mogelijk'); }
+});
+$('#fotoimport').addEventListener('click',()=>{ if(!user){renderLogin();return;} $('#fotoimportfile').click(); });
+$('#fotoimportfile').addEventListener('change',async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f||!user) return;
+  let files,man;
+  try{ files=await leesZip(await blobBuf(f)); man=JSON.parse(new TextDecoder().decode(files['fotos.json'])); if(!Array.isArray(man.fotos)) throw 0; }
+  catch(err){ toast('Dit is geen foto-export van het Vangstlogboek'); return; }
+  const idx=new Map(catches.map(c=>[fotoMatch(c),c])); let n=0, mis=0, fout=0;
+  for(const m of man.fotos){
+    const data=files[m.bestand], c=idx.get(fotoMatch(m));
+    if(!data||!c){mis++;continue;}
+    try{ const p=await verwerkFoto(new Blob([data],{type:'image/jpeg'}),true); dropThumb(c.id); await fotoPut(c.id,p); c.foto=true; n++; }
+    catch(err){ fout++; }
+  }
+  if(n){ lsSave(); vraagPersist(); }
+  renderLog();
+  toast(n+(n===1?' foto':' foto\'s')+' teruggezet'+(mis?', '+mis+' zonder bijpassende vangst':'')+(fout?', '+fout+' onleesbaar':''));
+});
 
 // ---------- logboek ----------
 function renderLog(){
@@ -1313,6 +1556,7 @@ function renderLog(){
   $('#merklist').innerHTML=uniq('merk').filter(v=>![...merkLijst('Shad'),...merkLijst('Plug')].includes(v)).map(v=>'<option value="'+esc(v)+'">').join('');
   $('#pleklist').innerHTML=uniq('plek').filter(v=>!plekLijst().includes(v)).map(v=>'<option value="'+esc(v)+'">').join('');
   $('#aaslist').innerHTML=uniq('aas').map(v=>'<option value="'+esc(v)+'">').join('');
+  fotoInfo();
   if(!catches.length){el.innerHTML='<div class="empty">Nog geen vangsten. Start een visdag en registreer je eerste vis.</div>';return;}
   el.innerHTML=catches.map(c=>`
     <div class="entry${c.soort===GEEN?' nul':''}">
@@ -1323,10 +1567,11 @@ function renderLog(){
         <div class="m">${esc(c.techniek)}${c.aas?' · '+esc(c.aas):''}${c.merk?' ('+esc(c.merk)+')':''} · ${esc(c.kleur)}</div>
         ${c.notitie?'<div class="m">'+esc(c.notitie)+'</div>':''}
       </div>
-      <div class="r">${c.lat?'<a class="m" href="https://maps.apple.com/?ll='+c.lat+','+c.lon+'&q=Vangst" target="_blank" rel="noopener">kaart</a><br>':''}<button class="e" data-id="${esc(c.id)}">wijzig</button><button class="x" data-id="${esc(c.id)}">verwijder</button></div>
+      <div class="r">${c.foto?'<img class="thumb" data-foto="'+esc(c.id)+'" alt="Foto van de vangst">':''}${c.lat?'<a class="m" href="https://maps.apple.com/?ll='+c.lat+','+c.lon+'&q=Vangst" target="_blank" rel="noopener">kaart</a><br>':''}<button class="e" data-id="${esc(c.id)}">wijzig</button><button class="x" data-id="${esc(c.id)}">verwijder</button></div>
     </div>`).join('');
   el.querySelectorAll('.x').forEach(b=>b.addEventListener('click',()=>remove(b.dataset.id)));
   el.querySelectorAll('.e').forEach(b=>b.addEventListener('click',()=>edit(b.dataset.id)));
+  vulThumbs(el);
 }
 
 $('#export').addEventListener('click',()=>{
