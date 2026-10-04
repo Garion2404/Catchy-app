@@ -449,7 +449,7 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.29'; // ophogen bij elke wijziging
+const VERSIE='1.30'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
@@ -1777,9 +1777,10 @@ function renderDash(){
   const standalone=navigator.standalone===true||(!!window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
   if(!standalone) return;
   const invoer=()=>{const a=document.activeElement;return !!a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.type!=='file'&&a.type!=='checkbox';};
+  let naToets=false; // alleen na toetsenbord mag de balk verschoven worden
   function meet(){
     root.style.setProperty('--navfix','0px');
-    if(invoer()) return;
+    if(invoer()||!naToets) return;
     const vv=window.visualViewport; if(vv&&Math.abs(vv.scale-1)>0.01) return;
     const kort=Math.min(screen.width,screen.height), lang=Math.max(screen.width,screen.height);
     const doel=innerWidth<=kort+1?lang:kort;
@@ -1787,9 +1788,19 @@ function renderDash(){
     if(d>30&&d<doel*0.6) root.style.setProperty('--navfix',d+'px');
   }
   let t=null, s=null;
-  function plan(){ clearTimeout(t); t=setTimeout(()=>{ const y=scrollY; scrollTo(0,y+1); scrollTo(0,y); requestAnimationFrame(meet); },350); }
-  ['resize','orientationchange','focusout','pageshow'].forEach(e=>window.addEventListener(e,plan));
-  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) plan(); });
+  function prik(){
+    const b=document.body, oud=b.style.minHeight, y=scrollY;
+    b.style.minHeight=(innerHeight+2)+'px';
+    scrollTo(0,y+1); scrollTo(0,y);
+    requestAnimationFrame(()=>{ b.style.minHeight=oud; });
+  }
+  function plan(){ clearTimeout(t); t=setTimeout(()=>{ prik(); requestAnimationFrame(()=>requestAnimationFrame(meet)); },350); }
+  window.addEventListener('focusout',()=>{ naToets=true; plan(); });
+  window.addEventListener('focusin',()=>{ naToets=false; });
+  ['resize','orientationchange'].forEach(e=>window.addEventListener(e,plan));
+  // app (opnieuw) geopend: nooit schuiven, alleen iOS laten herrekenen
+  window.addEventListener('pageshow',()=>{ naToets=false; plan(); });
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ naToets=false; plan(); } });
   if(window.visualViewport) visualViewport.addEventListener('resize',plan);
   window.addEventListener('scroll',()=>{ clearTimeout(s); s=setTimeout(meet,150); },{passive:true});
   plan();
