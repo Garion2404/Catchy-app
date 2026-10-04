@@ -86,6 +86,11 @@ nav button.on{color:var(--accent)}
 .sheet{background:var(--bg);width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}
 .sheet h2{margin-top:12px}
 .sheet .head{display:flex;justify-content:space-between;align-items:center}
+.sheet.vast{padding-top:0}
+.sheet.vast .head{position:sticky;top:0;z-index:3;background:var(--bg);margin:0 -16px;padding:16px 16px 10px;border-bottom:1px solid var(--line)}
+.sheet.metvoet{padding-bottom:0}
+.sheet .voet{position:sticky;bottom:0;z-index:3;background:var(--bg);margin:14px -16px 0;padding:10px 16px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+.sheet .voet .btn{margin-top:0}
 .sheet .head h1{margin:0;padding:0}
 .close{border:0;background:var(--chip);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-weight:700;cursor:pointer}
 .swatches{display:flex;flex-wrap:wrap;gap:10px}
@@ -309,7 +314,7 @@ nav button{font-size:.72rem}
 
 <!-- ============ VISDAG ============ -->
 <div class="modal" id="sesmodal">
-  <div class="sheet" role="dialog" aria-label="Visdag">
+  <div class="sheet vast metvoet" role="dialog" aria-label="Visdag">
     <div class="head"><h1 id="sestitle">Visdag starten</h1><button class="close" id="sesclose">Sluiten</button></div>
     <div class="card">
       <div class="row">
@@ -317,12 +322,21 @@ nav button{font-size:.72rem}
         <div><label class="f" for="seseind">Einde</label><input type="datetime-local" id="seseind"></div>
       </div>
       <p class="note" id="eindnote">Vis je nu? Laat het einde leeg; dat wordt gevuld als je de visdag afsluit. Leg je een eerdere visdag vast, pas dan het begin aan en vul ook het einde in; daarna kun je direct de vangsten toevoegen.</p>
+      <span class="f" id="lbl-vistype">Soort visdag</span>
+      <div class="chips" id="vistype" role="group" aria-labelledby="lbl-vistype"></div>
       <label class="f" for="locatie">Hoofdlocatie</label>
       <div class="withmic">
         <input type="text" id="locatie" maxlength="80" placeholder="wordt automatisch ingevuld" list="loclist"><datalist id="loclist"></datalist>
         <button type="button" class="mic" data-for="locatie" aria-label="Spreek locatie in"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
       </div>
       <div class="loc" id="locline"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span id="loctext">Locatie wordt bepaald&hellip;</span></div>
+    </div>
+
+    <h2>Aanbeten</h2>
+    <div class="card">
+      <span class="f" id="lbl-aanbeten">Aantal aanbeten</span>
+      <div class="chips" id="aanbeten" role="group" aria-labelledby="lbl-aanbeten"></div>
+      <p class="note">Laat leeg zolang je het nog niet weet; je kunt dit bij het wijzigen van de visdag invullen.</p>
     </div>
 
     <h2>Weer</h2>
@@ -346,13 +360,6 @@ nav button{font-size:.72rem}
     <h2 id="voorsp-h">Voorspelling</h2>
     <div class="card" id="voorspelling"></div>
 
-    <h2>Aanbeten</h2>
-    <div class="card">
-      <span class="f" id="lbl-aanbeten">Aantal aanbeten</span>
-      <div class="chips" id="aanbeten" role="group" aria-labelledby="lbl-aanbeten"></div>
-      <p class="note">Laat leeg zolang je het nog niet weet; je kunt dit bij het wijzigen van de visdag invullen.</p>
-    </div>
-
     <h2>Notitie</h2>
     <div class="card">
       <div class="withmic">
@@ -360,13 +367,13 @@ nav button{font-size:.72rem}
         <button type="button" class="mic" data-for="sesnotitie" aria-label="Spreek notitie in"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
       </div>
     </div>
-    <button class="btn" id="sessave">Visdag starten</button>
+    <div class="voet"><button class="btn" id="sessave">Visdag starten</button></div>
   </div>
 </div>
 
 <!-- ============ INSTELLINGEN ============ -->
 <div class="modal" id="modal">
-  <div class="sheet" role="dialog" aria-label="Instellingen">
+  <div class="sheet vast" role="dialog" aria-label="Instellingen">
     <div class="head"><h1>Instellingen</h1><button class="close" id="close">Klaar</button></div>
     <h2>Account</h2>
     <div class="card">
@@ -439,7 +446,7 @@ nav button{font-size:.72rem}
     <p>Gegevens staan alleen op dit apparaat, in deze browser. Maak regelmatig een back-up via <b>Exporteer als CSV</b> in het logboek. Met <b>Importeer CSV</b> zet je een back-up terug; dubbele regels worden overgeslagen.</p>
     <p>Foto's zitten niet in de CSV. Maak daarvoor een aparte back-up met <b>Exporteer foto's (zip)</b> in het logboek. Met <b>Importeer foto's (zip)</b> zet je ze terug; ze worden gekoppeld aan vangsten met dezelfde datum, soort en lengte, dus importeer eerst de CSV. Tip: zet de app op je beginscherm (Deel › Zet op beginscherm), dan wist Safari je gegevens niet als je de app een tijd niet opent.</p>
     <h2>9. Instellingen</h2>
-    <p>Weergave (licht, donker, automatisch), accentkleur, grootte dashboard, het automatisch ophalen van locatie en weer en spraakinvoer aan/uit. Bij <b>Keuzeopties</b> voeg je zelf keuzes toe aan vissoort, techniek, kunstaas, merk, kleur en plek, of verwijder je opties (ook de standaardopties) die je niet gebruikt. Per onderdeel stel je ook de <b>standaardkeuze</b> in; die wordt ingevuld bij het openen van de app en bij elke nieuwe visdag. Verwijderde standaardopties zet je met één tik terug. Alle instellingen worden op dit apparaat onthouden.</p>
+    <p>Weergave (licht, donker, automatisch), accentkleur, grootte dashboard, het automatisch ophalen van locatie en weer en spraakinvoer aan/uit. Bij <b>Keuzeopties</b> voeg je zelf keuzes toe aan vissoort, techniek, kunstaas, merk, kleur, plek en soort visdag, of verwijder je opties (ook de standaardopties) die je niet gebruikt. Per onderdeel stel je ook de <b>standaardkeuze</b> in; die wordt ingevuld bij het openen van de app en bij elke nieuwe visdag. Verwijderde standaardopties zet je met één tik terug. Alle instellingen worden op dit apparaat onthouden.</p>
   </div>
 </div>
 <div class="fotoview" id="fotoview" role="dialog" aria-label="Foto"><button type="button" class="close" id="fotoviewclose">Sluiten</button><img id="fotoviewimg" alt="Foto van de vangst"></div>
@@ -449,7 +456,7 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.30'; // ophogen bij elke wijziging
+const VERSIE='1.31'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
@@ -466,6 +473,7 @@ const KLEUREN=['Blauw','Bruin','Donkergroen','Firetiger','Grijs-Wit','Groen','Ka
 const hernoemKleur=c=>{ if(c&&c.kleur==='Chartreuse'){c.kleur='Groen';return true;} return false; };
 const MAANDEN=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
 const PLEKKEN=['Langs de kant','In het midden','Onder brug','Bij begroeiing','Overig'];
+const VISTYPES=['Vanaf de kant','Vanuit de boot','Overig'];
 // instellingen (worden op dit apparaat onthouden)
 const SETK='vangstlogboek.settings';
 let settings=Object.assign({mode:'auto',palette:'amber',autofetch:true,autoloc:true,dashsize:'normaal',spraak:true,extra:{}},(()=>{try{return JSON.parse(localStorage.getItem(SETK))||{};}catch(e){return {};}})());
@@ -474,7 +482,7 @@ if(!settings.verborgen||typeof settings.verborgen!=='object') settings.verborgen
 if(!settings.standaard||typeof settings.standaard!=='object') settings.standaard={}; // eigen standaardkeuze per onderdeel // verborgen standaardopties per onderdeel
 function saveSettings(){try{localStorage.setItem(SETK,JSON.stringify(settings));}catch(e){}}
 // eigen opties per onderdeel
-const DELEN={soort:'Vissoort',techniek:'Techniek',aastype:'Kunstaas',merk_Shad:'Merk (Shad)',merk_Plug:'Merk (Plug)',kleur:'Kleur',plek:'Plek'};
+const DELEN={soort:'Vissoort',techniek:'Techniek',aastype:'Kunstaas',merk_Shad:'Merk (Shad)',merk_Plug:'Merk (Plug)',kleur:'Kleur',plek:'Plek',vistype:'Soort visdag'};
 const extra=k=>Array.isArray(settings.extra[k])?settings.extra[k]:[];
 const verborgen=k=>Array.isArray(settings.verborgen[k])?settings.verborgen[k]:[];
 // alles=true: ook verborgen standaardopties (voor dashboard en historie). 'Overig' blijft altijd staan.
@@ -492,8 +500,9 @@ const techLijst=()=>metExtra(TECHNIEK,'techniek');
 const aasLijst=()=>metExtra(AASTYPES,'aastype');
 const kleurLijst=()=>metExtra(KLEUREN,'kleur');
 const plekLijst=()=>metExtra(PLEKKEN,'plek');
+const vistypeLijst=()=>metExtra(VISTYPES,'vistype');
 const merkLijst=t=>MERKEN[t]?metExtra(MERKEN[t],'merk_'+t):null;
-const basisLijst=k=>({soort:SOORTEN,techniek:TECHNIEK,aastype:AASTYPES,merk_Shad:MERKEN.Shad,merk_Plug:MERKEN.Plug,kleur:KLEUREN,plek:PLEKKEN})[k]||[];
+const basisLijst=k=>({soort:SOORTEN,techniek:TECHNIEK,aastype:AASTYPES,merk_Shad:MERKEN.Shad,merk_Plug:MERKEN.Plug,kleur:KLEUREN,plek:PLEKKEN,vistype:VISTYPES})[k]||[];
 
 let catches=[];
 let dashFilter='Alle';
@@ -528,6 +537,7 @@ chips('wind',WINDGRID,'ZW');
 chips('regen',REGEN,'Droog');
 chips('trend',TREND,'Stabiel');
 chips('aanbeten',AANBETEN,'');
+chips('vistype',vistypeLijst(),'',true);
 chips('techniek',techLijst(),stdKeuze('techniek'));
 function renderTechEigen(){ $('#techeigenbox').hidden=sel('techniek')!=='Overig'; }
 $('#techniek').addEventListener('click',e=>{if(e.target.closest('.chip'))renderTechEigen();});
@@ -588,6 +598,7 @@ function bouwKeuzes(){
   chips('kleur',kleurLijst(),''); setKleur(weg('kleur',kl)?stdKeuze('kleur'):kl);
   chips('aastype',aasLijst(),aasLijst().includes(at)?at:stdKeuze('aastype')); renderAas(weg('merk_'+at,me)?stdKeuze('merk_'+sel('aastype')):me);
   chips('plek',plekLijst(),'',true); setPlek(weg('plek',pl)?stdKeuze('plek'):pl);
+  const vt=sel('vistype'); chips('vistype',vistypeLijst(),vistypeLijst().includes(vt)?vt:'',true);
 }
 function pasStandaardToe(){
   setChip('soort',stdKeuze('soort')); setTech(stdKeuze('techniek')); setKleur(stdKeuze('kleur'));
@@ -683,7 +694,7 @@ function renderOpties(){
     kop('Verwijderde standaardopties (tik om terug te zetten)');
     rij(weg,v=>'+ '+v,v=>{ settings.verborgen[k]=verborgen(k).filter(x=>x!==v); saveSettings(); bouwKeuzes(); renderOpties(); toast('"'+v+'" teruggezet'); });
   }
-  if(basisLijst(k).includes('Overig')){ const p=document.createElement('p'); p.className='note'; p.style.margin='8px 0 0'; p.textContent='Overig (zelf invullen) blijft altijd beschikbaar.'; box.appendChild(p); }
+  if(basisLijst(k).includes('Overig')&&k!=='vistype'){ const p=document.createElement('p'); p.className='note'; p.style.margin='8px 0 0'; p.textContent='Overig (zelf invullen) blijft altijd beschikbaar.'; box.appendChild(p); }
 }
 $('#optdeel').addEventListener('change',renderOpties);
 $('#optadd').addEventListener('click',()=>{
@@ -1133,10 +1144,12 @@ function openSes(ses){
     if(ses.druk!=null) setRange('druk','drukv',ses.druk,' hPa');
     setChip('wind',ses.wind||''); setChip('regen',ses.regen||''); setChip('trend',ses.trend||'');
     setChip('aanbeten',ses.aanbeten||'');
+    if(ses.vistype&&!vistypeLijst().includes(ses.vistype)) chips('vistype',vistypeLijst().concat([ses.vistype]),ses.vistype,true); else chips('vistype',vistypeLijst(),ses.vistype||'',true);
     $('#weer-note').textContent='Weer zoals vastgelegd bij deze visdag. Opnieuw ophalen vervangt het.';
   }else{
     $('#sesstart').value=nowLocal(); $('#seseind').value=''; $('#locatie').value=''; $('#sesnotitie').value='';
     setChip('aanbeten','');
+    chips('vistype',vistypeLijst(),stdKeuze('vistype'),true);
     pos=null; $('#loctext').textContent='Locatie wordt bepaald…';
     $('#weer-note').textContent='Locatie en weer worden opgehaald en gelden voor de hele visdag.';
     if(settings.autofetch) fetchAll(true);
@@ -1163,7 +1176,7 @@ $('#sessave').addEventListener('click',()=>{
     lat:pos?Number(pos.lat.toFixed(5)):null, lon:pos?Number(pos.lon.toFixed(5)):null, plaats:pos?pos.plaats:'',
     temp:Number($('#temp').value), wind:sel('wind'), bft:Number($('#bft').value),
     regen:sel('regen'), druk:Number($('#druk').value), trend:sel('trend'),
-    aanbeten:sel('aanbeten'), notitie:$('#sesnotitie').value.trim(), maand:new Date(begin).getMonth()+1};
+    aanbeten:sel('aanbeten'), vistype:sel('vistype'), notitie:$('#sesnotitie').value.trim(), maand:new Date(begin).getMonth()+1};
   if(sesEdit){
     Object.assign(sesEdit,data);
     // weer van de visdag doorzetten naar de gekoppelde vangsten
@@ -1216,7 +1229,7 @@ function renderSessions(){
         <div class="m">${esc(fmtDag(s.datum))} · ${esc(fmtTijd(s.datum))}–${s.eind?esc(fmtTijd(s.eind)):'nu'} · ${esc(uurTxt(sesUren(s)))}</div>
         <div class="m">${esc(vangst)}${list.length?' · '+(list.length/Math.max(sesUren(s),.25)).toFixed(1).replace('.',',')+' per uur':''}</div>
         <div class="m">${esc(s.temp)} °C · ${esc(s.wind)} ${esc(s.bft)} Bft · ${esc(s.regen)} · ${esc(s.druk)} hPa ${esc((s.trend||'').toLowerCase())}</div>
-        ${s.aanbeten?'<div class="m">Aanbeten: '+esc(s.aanbeten)+'</div>':''}
+        ${s.vistype||s.aanbeten?'<div class="m">'+[s.vistype,s.aanbeten?'Aanbeten: '+s.aanbeten:''].filter(Boolean).map(esc).join(' · ')+'</div>':''}
         ${s.notitie?'<div class="m">'+esc(s.notitie)+'</div>':''}
       </div>
       <div class="r">${s.lat?'<a class="m" href="https://maps.apple.com/?ll='+s.lat+','+s.lon+'&q=Visdag" target="_blank" rel="noopener">kaart</a><br>':''}<button class="e a" data-id="${esc(s.id)}">+ vangst</button><br><button class="e w" data-id="${esc(s.id)}">wijzig</button><button class="x" data-id="${esc(s.id)}">verwijder</button></div>
@@ -1575,7 +1588,7 @@ function renderLog(){
 }
 
 $('#export').addEventListener('click',()=>{
-  const cols=['visser','datum','soort','lengte','locatie','plaats','lat','lon','temp','wind','bft','regen','druk','trend','techniek','aastype','aas','merk','kleur','plek','notitie','visdag_begin','visdag_eind','visdag_locatie','visdag_notitie','visdag_aanbeten'];
+  const cols=['visser','datum','soort','lengte','locatie','plaats','lat','lon','temp','wind','bft','regen','druk','trend','techniek','aastype','aas','merk','kleur','plek','notitie','visdag_begin','visdag_eind','visdag_locatie','visdag_notitie','visdag_aanbeten','visdag_soort'];
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const rij=(c,s)=>cols.map(k=>{
     if(k==='visser')return q(user.naam);
@@ -1584,6 +1597,7 @@ $('#export').addEventListener('click',()=>{
     if(k==='visdag_locatie')return q(s?s.locatie:'');
     if(k==='visdag_notitie')return q(s?s.notitie:'');
     if(k==='visdag_aanbeten')return q(s?s.aanbeten:'');
+    if(k==='visdag_soort')return q(s?s.vistype:'');
     return q(c[k]);
   }).join(';');
   const lijnen=catches.map(c=>rij(c,sesById(c.sessieId)));
@@ -1630,12 +1644,12 @@ $('#importfile').addEventListener('change',async e=>{
         if(!ses){
           ses={id:newId('s'),datum:c.visdag_begin,eind:c.visdag_eind||addHours(c.visdag_begin,1),
             locatie:c.visdag_locatie||c.locatie||'',lat:c.lat??null,lon:c.lon??null,plaats:c.plaats||'',
-            notitie:c.visdag_notitie||'',aanbeten:c.visdag_aanbeten==='11 of meer'?'11–20':(c.visdag_aanbeten||''),maand:new Date(c.visdag_begin).getMonth()+1};
+            notitie:c.visdag_notitie||'',aanbeten:c.visdag_aanbeten==='11 of meer'?'11–20':(c.visdag_aanbeten||''),vistype:c.visdag_soort||'',maand:new Date(c.visdag_begin).getMonth()+1};
           WEERV.forEach(k=>ses[k]=c[k]);
           sessions.push(ses); ns++;
         }
       }
-      ['visdag_begin','visdag_eind','visdag_locatie','visdag_notitie','visdag_aanbeten'].forEach(k=>delete c[k]);
+      ['visdag_begin','visdag_eind','visdag_locatie','visdag_notitie','visdag_aanbeten','visdag_soort'].forEach(k=>delete c[k]);
       if(c.soort===GEEN) return;            // lege visdag: sessie is genoeg
       if(!c.soort||!c.datum||have.has(key(c)))return;
       hernoemKleur(c);
