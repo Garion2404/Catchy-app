@@ -357,6 +357,19 @@ nav button{font-size:.72rem}
       <div class="chips" id="trend" role="group" aria-labelledby="lbl-trend"></div>
     </div>
 
+    <h2>Water</h2>
+    <div class="card">
+      <p class="note" id="water-note" style="margin-top:0">Waterstand, stroomsnelheid en watertemperatuur worden opgehaald bij het dichtstbijzijnde meetpunt van Rijkswaterstaat (binnen 15 km). Leeg = geen meetpunt in de buurt. Je kunt alles zelf invullen of aanpassen.</p>
+      <div class="row">
+        <div><label class="f" for="wstand">Waterstand (cm NAP)</label><input type="number" id="wstand" inputmode="decimal" step="1" placeholder="bijv. 45"></div>
+        <div><label class="f" for="wtemp">Watertemp. (&deg;C)</label><input type="number" id="wtemp" inputmode="decimal" step="0.1" placeholder="bijv. 12,5"></div>
+      </div>
+      <div class="row">
+        <div><label class="f" for="wsnel">Stroomsnelheid (m/s)</label><input type="number" id="wsnel" inputmode="decimal" step="0.01" placeholder="bijv. 0,4"></div>
+        <div></div>
+      </div>
+    </div>
+
     <h2 id="voorsp-h">Voorspelling</h2>
     <div class="card" id="voorspelling"></div>
 
@@ -422,7 +435,7 @@ nav button{font-size:.72rem}
     <h2>1. Inloggen</h2>
     <p>Kies bij het openen je naam of maak een nieuwe visser aan, eventueel met een pincode van 4–6 cijfers. Vangsten, logboek en dashboard zijn per visser. Wisselen doe je via Instellingen › Account.</p>
     <h2>2. Visdag starten</h2>
-    <p>Elke vangst hoort bij een visdag. Tik op <b>Visdag starten</b>. Begintijd, hoofdlocatie en weer (temperatuur, wind, regen, luchtdruk en trend) worden automatisch opgehaald via gps en Open-Meteo. Je kunt alles aanpassen of met <b>Locatie en weer opnieuw ophalen</b> verversen.</p>
+    <p>Elke vangst hoort bij een visdag. Tik op <b>Visdag starten</b>. Begintijd, hoofdlocatie en weer (temperatuur, wind, regen, luchtdruk en trend) worden automatisch opgehaald via gps en Open-Meteo. Daarnaast worden waterstand (cm NAP), stroomsnelheid en watertemperatuur opgehaald bij het dichtstbijzijnde meetpunt van Rijkswaterstaat binnen 15 km; Rijkswaterstaat meet alleen op de grote wateren (rivieren, kanalen, meren), dus op polderwater blijven deze velden vaak leeg. Niet elk meetpunt meet alle drie. Je kunt alles aanpassen of met <b>Locatie en weer opnieuw ophalen</b> verversen.</p>
     <p>Bij het starten van een visdag toont <b>Voorspelling</b> de kans op vangst en advies over soort, techniek, kunstaas, merk, kleur en beste tijd. Dit is gebaseerd op je eigen visdagen bij vergelijkbaar weer (temperatuur, luchtdruk en trend, wind, regen) en seizoen. Pas je het weer aan, dan past de voorspelling mee aan. Heb je bij je visdagen het aantal aanbeten ingevuld, dan toont de voorspelling ook de kans op een aanbeet, het verwachte aantal aanbeten en je omzetting (welk deel van de aanbeten een vangst wordt); dit telt mee in de kans op vangst. Er zijn minimaal 3 afgesloten visdagen nodig.</p>
     <p><b>Eerdere visdag vastleggen:</b> zet bij <b>Begin</b> de datum en tijd van die dag en vul ook het <b>Einde</b> in. Het weer van dat moment wordt dan (historisch) opgehaald via Open-Meteo, voor de locatie van je toestel; controleer het als je toen ergens anders was. Na opslaan voeg je direct de vangsten toe. Later nog een vangst toevoegen kan via <b>+ vangst</b> bij de visdag onder Visdagen.</p>
     <h2>3. Vangst vastleggen</h2>
@@ -456,7 +469,7 @@ nav button{font-size:.72rem}
 (function(){
 'use strict';
 const SOORTEN=['Snoek','Baars','Snoekbaars','Roofblei'];
-const VERSIE='1.31'; // ophogen bij elke wijziging
+const VERSIE='1.32'; // ophogen bij elke wijziging
 const GEEN='Geen vangst'; // sessie zonder vangst
 let editing=null; // record dat wordt gewijzigd
 const WINDGRID=['NW','N','NO','W','','O','ZW','Z','ZO'];
@@ -869,6 +882,113 @@ async function fetchWeather(lat,lon){
   setChip('trend',trend);
   return c;
 }
+// ---------- waterdata (Rijkswaterstaat WaterWebservices) ----------
+const RWS='https://ddapi20-waterwebservices.rijkswaterstaat.nl/';
+const RWSK='vangstlogboek.rwsmeetpunten', WMAXKM=15;
+const WGROOT=[{k:'wstand',g:'WATHTE',h:'NAP'},{k:'wsnel',g:'STROOMSHD'},{k:'wtemp',g:'T'}];
+function kmTussen(a,b,c,d){const r=Math.PI/180,x=(d-b)*r*Math.cos((a+c)/2*r),y=(c-a)*r;return Math.sqrt(x*x+y*y)*6371;}
+async function rwsPost(pad,body,ms){
+  const go=type=>{const ac=new AbortController(),t=setTimeout(()=>ac.abort(),ms||15000);
+    return fetch(RWS+pad,{method:'POST',headers:{'Content-Type':type},body:JSON.stringify(body),signal:ac.signal}).finally(()=>clearTimeout(t));};
+  let r; try{ r=await go('application/json'); }catch(e){ if(e.name==='AbortError') throw e; r=await go('text/plain;charset=UTF-8'); }
+  if(r.status===204) return null; if(!r.ok) throw new Error('rws '+r.status);
+  return r.json();
+}
+const vk=(o,...ks)=>{for(const k of ks) if(o&&o[k]!=null) return o[k]; return null;};
+const codeVan=x=>x==null?'':(typeof x==='object'?(x.Code||''):String(x));
+// meetpunten per grootheid, 30 dagen bewaard op het toestel
+async function rwsMeetpunten(){
+  try{ const c=JSON.parse(localStorage.getItem(RWSK)); if(c&&c.lijst&&Date.now()-c.t<30*864e5) return c.lijst; }catch(e){}
+  const j=await rwsPost('METADATASERVICES/OphalenCatalogus',{CatalogusFilter:{Compartimenten:true,Grootheden:true,Eenheden:true,Hoedanigheden:true}},45000);
+  if(!j) throw new Error('catalogus');
+  const meta=new Map();
+  (j.AquoMetadataLijst||[]).forEach(m=>{
+    if(codeVan(m.Compartiment)!=='OW') return;
+    const g=codeVan(m.Grootheid), d=WGROOT.find(x=>x.g===g); if(!d) return;
+    meta.set(String(vk(m,'AquoMetadata_MessageID','AquoMetaData_MessageID')),{k:d.k,g,h:codeVan(m.Hoedanigheid),e:codeVan(m.Eenheid)});
+  });
+  const locs=new Map();
+  (j.LocatieLijst||[]).forEach(l=>{
+    let la=vk(l,'Lat','Latitude'), lo=vk(l,'Lon','Longitude');
+    if(la==null&&/4258|4326/.test(String(l.Coordinatenstelsel||''))){ la=l.Y; lo=l.X; }
+    la=Number(la); lo=Number(lo); if(!isFinite(la)||!isFinite(lo)||Math.abs(la)>90) return;
+    locs.set(String(l.Locatie_MessageID),{c:l.Code,n:l.Naam||l.Code,la,lo});
+  });
+  const lijst=[], gezien=new Set();
+  (j.AquoMetadataLocatieLijst||[]).forEach(x=>{
+    const m=meta.get(String(vk(x,'AquoMetaData_MessageID','AquoMetadata_MessageID'))), l=locs.get(String(x.Locatie_MessageID));
+    if(!m||!l) return; const sl=m.k+'|'+l.c+'|'+m.h; if(gezien.has(sl)) return; gezien.add(sl);
+    lijst.push({k:m.k,g:m.g,h:m.h,e:m.e,c:l.c,n:l.n,la:l.la,lo:l.lo});
+  });
+  if(!lijst.length) throw new Error('geen meetpunten');
+  try{ localStorage.setItem(RWSK,JSON.stringify({t:Date.now(),lijst})); }catch(e){}
+  return lijst;
+}
+function rwsWaarde(j,when){
+  let best=null;
+  ((j&&j.WaarnemingenLijst)||[]).forEach(w=>{
+    const e=codeVan(w.AquoMetadata&&w.AquoMetadata.Eenheid);
+    (w.MetingenLijst||[]).forEach(m=>{
+      const v=Number(m.Meetwaarde&&m.Meetwaarde.Waarde_Numeriek), t=new Date(m.Tijdstip).getTime();
+      if(!isFinite(v)||Math.abs(v)>=1e8||isNaN(t)) return;
+      const sc=when?-Math.abs(t-when):t;
+      if(!best||sc>best.sc) best={v,t,e,sc};
+    });
+  });
+  return best;
+}
+function rwsMeta(p){const a={Compartiment:{Code:'OW'},Grootheid:{Code:p.g}}; if(p.h) a.Hoedanigheid={Code:p.h}; if(p.g==='WATHTE') a.ProcesType='meting'; return a;}
+// when = null voor actueel, anders een lokale datum/tijd (eerdere visdag)
+async function fetchWater(lat,lon,when){
+  const lijst=await rwsMeetpunten(), wt=when?new Date(when).getTime():null;
+  const iso=ms=>new Date(ms).toISOString().replace('Z','+00:00');
+  const res=await Promise.all(WGROOT.map(async d=>{
+    let kand=lijst.filter(p=>p.k===d.k&&(!d.h||!p.h||p.h===d.h)).map(p=>Object.assign({km:kmTussen(lat,lon,p.la,p.lo)},p))
+      .filter(p=>p.km<=WMAXKM).sort((a,b)=>a.km-b.km);
+    for(const p of kand.slice(0,3)){            // dichtstbijzijnde met een bruikbare meting
+      try{
+        const j=wt==null
+          ?await rwsPost('ONLINEWAARNEMINGENSERVICES/OphalenLaatsteWaarnemingen',{LocatieLijst:[{Code:p.c}],AquoPlusWaarnemingMetadataLijst:[{AquoMetadata:rwsMeta(p)}]})
+          :await rwsPost('ONLINEWAARNEMINGENSERVICES/OphalenWaarnemingen',{Locatie:{Code:p.c},AquoPlusWaarnemingMetadata:{AquoMetadata:rwsMeta(p)},Periode:{Begindatumtijd:iso(wt-3600000),Einddatumtijd:iso(wt+3600000)}});
+        const b=rwsWaarde(j,wt);
+        if(!b) continue;
+        if(wt==null&&Date.now()-b.t>6*3600000) continue;   // te oude meting
+        let v=b.v; const e=(b.e||p.e||'').toLowerCase();
+        if(d.k==='wsnel'&&e==='cm/s') v=v/100;
+        if(d.k==='wstand'&&e==='m') v=v*100;
+        return {k:d.k,v,n:p.n,km:p.km};
+      }catch(e){ if(e.name==='AbortError') break; }
+    }
+    return null;
+  }));
+  return res.filter(Boolean);
+}
+const WFMT={wstand:v=>Math.round(v),wsnel:v=>Math.round(v*100)/100,wtemp:v=>Math.round(v*10)/10};
+function setWater(k,v){$('#'+k).value=(v==null||v==='')?'':WFMT[k](Number(v));}
+function getWater(k){const v=$('#'+k).value.trim();if(v==='')return null;const n=Number(v.replace(',','.'));return isFinite(n)?WFMT[k](n):null;}
+function waterTxt(o){
+  const d=[];
+  if(o.wtemp!=null&&o.wtemp!=='') d.push(String(o.wtemp).replace('.',',')+' °C water');
+  if(o.wstand!=null&&o.wstand!=='') d.push((o.wstand>0?'+':'')+o.wstand+' cm NAP');
+  if(o.wsnel!=null&&o.wsnel!=='') d.push(String(o.wsnel).replace('.',',')+' m/s');
+  return d.join(' · ');
+}
+async function fetchAllWater(p,when){
+  const note=$('#water-note');
+  WGROOT.forEach(d=>setWater(d.k,null));
+  note.textContent='Waterdata ophalen bij Rijkswaterstaat…';
+  try{
+    const r=await fetchWater(p.lat,p.lon,when);
+    r.forEach(x=>setWater(x.k,x.v));
+    const naam={wstand:'waterstand',wsnel:'stroomsnelheid',wtemp:'watertemperatuur'};
+    note.textContent=r.length
+      ?'Rijkswaterstaat'+(when?' (historisch)':'')+': '+r.map(x=>naam[x.k]+' '+x.n+' ('+x.km.toFixed(1).replace('.',',')+' km)').join(', ')+'. Lege velden: geen meetpunt binnen '+WMAXKM+' km of geen recente meting.'
+      :'Geen meetpunt van Rijkswaterstaat binnen '+WMAXKM+' km met een bruikbare meting. Vul eventueel zelf in.';
+  }catch(e){
+    note.textContent='Waterdata van Rijkswaterstaat kon niet worden opgehaald. Vul eventueel zelf in.';
+  }
+}
+
 async function fetchAll(silent){
   const btn=$('#weer'),note=$('#weer-note'); btn.disabled=true;
   try{
@@ -880,6 +1000,7 @@ async function fetchAll(silent){
     note.textContent=past?'Weer van '+fmtDate(c.time)+' opgehaald (historisch, voor '+(p.plaats||'de gevonden locatie')+'). Was je toen ergens anders, pas het dan aan.'
       :'Locatie en weer ingevuld ('+fmtDate(c.time)+'). Pas aan als het ter plekke anders is.';
     if(!silent) toast('Locatie en weer ingevuld');
+    await fetchAllWater(p,past?when:null);
   }catch(e){
     note.textContent=e.message||'Ophalen mislukt. Vul de gegevens handmatig in.';
     if(!pos) $('#loctext').textContent='Locatie onbekend';
@@ -1067,7 +1188,7 @@ function parseCatch(raw){
 
 // ---------- save ----------
 // ---------- visdagen ----------
-const WEERV=['temp','wind','bft','regen','druk','trend'];
+const WEERV=['temp','wind','bft','regen','druk','trend','wstand','wsnel','wtemp'];
 const DAGEN=['zo','ma','di','wo','do','vr','za'];
 function newId(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function addHours(iso,h){const d=new Date(iso);if(isNaN(d))return iso;d.setTime(d.getTime()+h*3600000);
@@ -1144,11 +1265,14 @@ function openSes(ses){
     if(ses.druk!=null) setRange('druk','drukv',ses.druk,' hPa');
     setChip('wind',ses.wind||''); setChip('regen',ses.regen||''); setChip('trend',ses.trend||'');
     setChip('aanbeten',ses.aanbeten||'');
+    WGROOT.forEach(d=>setWater(d.k,ses[d.k]));
+    $('#water-note').textContent='Waterdata zoals vastgelegd bij deze visdag. Opnieuw ophalen vervangt het.';
     if(ses.vistype&&!vistypeLijst().includes(ses.vistype)) chips('vistype',vistypeLijst().concat([ses.vistype]),ses.vistype,true); else chips('vistype',vistypeLijst(),ses.vistype||'',true);
     $('#weer-note').textContent='Weer zoals vastgelegd bij deze visdag. Opnieuw ophalen vervangt het.';
   }else{
     $('#sesstart').value=nowLocal(); $('#seseind').value=''; $('#locatie').value=''; $('#sesnotitie').value='';
     setChip('aanbeten','');
+    WGROOT.forEach(d=>setWater(d.k,null));
     chips('vistype',vistypeLijst(),stdKeuze('vistype'),true);
     pos=null; $('#loctext').textContent='Locatie wordt bepaald…';
     $('#weer-note').textContent='Locatie en weer worden opgehaald en gelden voor de hele visdag.';
@@ -1176,6 +1300,7 @@ $('#sessave').addEventListener('click',()=>{
     lat:pos?Number(pos.lat.toFixed(5)):null, lon:pos?Number(pos.lon.toFixed(5)):null, plaats:pos?pos.plaats:'',
     temp:Number($('#temp').value), wind:sel('wind'), bft:Number($('#bft').value),
     regen:sel('regen'), druk:Number($('#druk').value), trend:sel('trend'),
+    wstand:getWater('wstand'), wsnel:getWater('wsnel'), wtemp:getWater('wtemp'),
     aanbeten:sel('aanbeten'), vistype:sel('vistype'), notitie:$('#sesnotitie').value.trim(), maand:new Date(begin).getMonth()+1};
   if(sesEdit){
     Object.assign(sesEdit,data);
@@ -1229,6 +1354,7 @@ function renderSessions(){
         <div class="m">${esc(fmtDag(s.datum))} · ${esc(fmtTijd(s.datum))}–${s.eind?esc(fmtTijd(s.eind)):'nu'} · ${esc(uurTxt(sesUren(s)))}</div>
         <div class="m">${esc(vangst)}${list.length?' · '+(list.length/Math.max(sesUren(s),.25)).toFixed(1).replace('.',',')+' per uur':''}</div>
         <div class="m">${esc(s.temp)} °C · ${esc(s.wind)} ${esc(s.bft)} Bft · ${esc(s.regen)} · ${esc(s.druk)} hPa ${esc((s.trend||'').toLowerCase())}</div>
+        ${waterTxt(s)?'<div class="m">'+esc(waterTxt(s))+'</div>':''}
         ${s.vistype||s.aanbeten?'<div class="m">'+[s.vistype,s.aanbeten?'Aanbeten: '+s.aanbeten:''].filter(Boolean).map(esc).join(' · ')+'</div>':''}
         ${s.notitie?'<div class="m">'+esc(s.notitie)+'</div>':''}
       </div>
@@ -1577,6 +1703,7 @@ function renderLog(){
         <div class="t">${esc(c.soort)}${c.lengte?' · '+esc(c.lengte)+' cm':''}${c.uren?' · '+esc(c.uren)+' uur gevist':''}</div>
         <div class="m">${esc(fmtDate(c.datum))}${c.locatie?' · '+esc(c.locatie):(c.plaats?' · '+esc(c.plaats):'')}${c.plek?' · '+esc(c.plek.toLowerCase()):''}</div>
         <div class="m">${esc(c.temp)} °C · ${esc(c.wind)} ${esc(c.bft)} Bft · ${esc(c.regen)} · ${esc(c.druk)} hPa ${esc((c.trend||'').toLowerCase())}</div>
+        ${waterTxt(c)?'<div class="m">'+esc(waterTxt(c))+'</div>':''}
         <div class="m">${esc(c.techniek)}${c.aas?' · '+esc(c.aas):''}${c.merk?' ('+esc(c.merk)+')':''} · ${esc(c.kleur)}</div>
         ${c.notitie?'<div class="m">'+esc(c.notitie)+'</div>':''}
       </div>
@@ -1588,7 +1715,7 @@ function renderLog(){
 }
 
 $('#export').addEventListener('click',()=>{
-  const cols=['visser','datum','soort','lengte','locatie','plaats','lat','lon','temp','wind','bft','regen','druk','trend','techniek','aastype','aas','merk','kleur','plek','notitie','visdag_begin','visdag_eind','visdag_locatie','visdag_notitie','visdag_aanbeten','visdag_soort'];
+  const cols=['visser','datum','soort','lengte','locatie','plaats','lat','lon','temp','wind','bft','regen','druk','trend','wstand','wsnel','wtemp','techniek','aastype','aas','merk','kleur','plek','notitie','visdag_begin','visdag_eind','visdag_locatie','visdag_notitie','visdag_aanbeten','visdag_soort'];
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const rij=(c,s)=>cols.map(k=>{
     if(k==='visser')return q(user.naam);
@@ -1604,7 +1731,7 @@ $('#export').addEventListener('click',()=>{
   // visdagen zonder vangst krijgen één regel, zodat ze bewaard blijven
   sessions.filter(s=>!sesCatches(s.id).length).forEach(s=>{
     const leeg={datum:s.datum,soort:GEEN,lengte:null,locatie:s.locatie,plaats:s.plaats,lat:s.lat,lon:s.lon,
-      temp:s.temp,wind:s.wind,bft:s.bft,regen:s.regen,druk:s.druk,trend:s.trend,techniek:'',aastype:'',aas:'',merk:'',kleur:'',plek:'',notitie:''};
+      temp:s.temp,wind:s.wind,bft:s.bft,regen:s.regen,druk:s.druk,trend:s.trend,wstand:s.wstand,wsnel:s.wsnel,wtemp:s.wtemp,techniek:'',aastype:'',aas:'',merk:'',kleur:'',plek:'',notitie:''};
     lijnen.push(rij(leeg,s));
   });
   const csv=[cols.join(';')].concat(lijnen).join('\n');
@@ -1632,7 +1759,7 @@ $('#importfile').addEventListener('change',async e=>{
   const f=e.target.files[0]; if(!f)return;
   try{
     const rows=parseCSV(await f.text()); const head=rows.shift().map(h=>h.trim().toLowerCase());
-    const num=['lengte','uren','lat','lon','temp','bft','druk'];
+    const num=['lengte','uren','lat','lon','temp','bft','druk','wstand','wsnel','wtemp'];
     const key=c=>[c.datum,c.soort,c.lengte].join('|'); const have=new Set(catches.map(key));
     let n=0,ns=0;
     rows.forEach(r=>{
